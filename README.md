@@ -1,7 +1,7 @@
 # crispy-robot
 
 MtaaPal client apps — a pnpm workspace. Currently one app: `apps/mobile`, the MtaaPal React
-Native/Expo chat client. Design mockups and the original brief live in `Todos/`.
+Native/Expo chat client.
 
 ## Architecture
 
