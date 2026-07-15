@@ -9,15 +9,21 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CartPanel } from "@/components/CartPanel";
+import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
 import { QuickActionCard } from "@/components/QuickActionCard";
 import { ZonePill } from "@/components/ZonePill";
+import { useCart } from "@/lib/useCart";
 import { useMtaaPalChat } from "@/lib/useMtaaPalChat";
 import { colors, radii, spacing, typography } from "@/theme";
+
+const WIDE_SCREEN_BREAKPOINT = 768;
 
 const quickActions = [
   { label: "Pick up groceries from Naivas", dotColor: colors.primary },
@@ -30,7 +36,10 @@ const quickActions = [
 
 export function HomeChatScreen() {
   const { messages, sendMessage } = useMtaaPalChat();
+  const cart = useCart();
   const [input, setInput] = useState("");
+  const { width } = useWindowDimensions();
+  const isWideScreen = width >= WIDE_SCREEN_BREAKPOINT;
 
   const submit = (text: string) => {
     sendMessage(text);
@@ -54,51 +63,57 @@ export function HomeChatScreen() {
 
       <ZonePill label="Kilimani · 5 services available" />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        {messages.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.greeting}>{"Good evening.\nWhat can I help with?"}</Text>
-            <View style={styles.grid}>
-              {quickActions.map((action) => (
-                <Pressable
-                  key={action.label}
-                  onPress={() => submit(action.label)}
-                  style={({ pressed }) => [styles.cardWrapper, pressed && styles.cardPressed]}
-                >
-                  <QuickActionCard label={action.label} dotColor={action.dotColor} />
-                </Pressable>
-              ))}
+      <View style={styles.body}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        >
+          {messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.greeting}>{"Good evening.\nWhat can I help with?"}</Text>
+              <View style={styles.grid}>
+                {quickActions.map((action) => (
+                  <Pressable
+                    key={action.label}
+                    onPress={() => submit(action.label)}
+                    style={({ pressed }) => [styles.cardWrapper, pressed && styles.cardPressed]}
+                  >
+                    <QuickActionCard label={action.label} dotColor={action.dotColor} />
+                  </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
-        ) : (
-          <FlatList
-            style={styles.flex}
-            contentContainerStyle={styles.messagesContent}
-            data={messages}
-            keyExtractor={(message) => message.id}
-            renderItem={({ item }) => <ChatMessageItem message={item} />}
-          />
-        )}
+          ) : (
+            <FlatList
+              style={styles.flex}
+              contentContainerStyle={styles.messagesContent}
+              data={messages}
+              keyExtractor={(message) => message.id}
+              renderItem={({ item }) => <ChatMessageItem message={item} />}
+            />
+          )}
 
-        <View style={styles.composer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Message MtaaPal..."
-            placeholderTextColor={colors.textMuted}
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={() => submit(input)}
-            returnKeyType="send"
-          />
-          <Pressable style={styles.sendButton} onPress={() => submit(input)}>
-            <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
+          {!isWideScreen && <CartPanel cart={cart} />}
+
+          <View style={styles.composer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Message MtaaPal..."
+              placeholderTextColor={colors.textMuted}
+              value={input}
+              onChangeText={setInput}
+              onSubmitEditing={() => submit(input)}
+              returnKeyType="send"
+            />
+            <Pressable style={styles.sendButton} onPress={() => submit(input)}>
+              <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+
+        {isWideScreen && cart ? <CartSidebar cart={cart} /> : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -110,6 +125,10 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  body: {
+    flex: 1,
+    flexDirection: "row",
   },
   header: {
     flexDirection: "row",
