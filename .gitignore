@@ -141,3 +141,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Expo
+.expo/
+apps/*/ios/
+apps/*/android/
+apps/*/expo-env.d.ts
+
+# macOS
+.DS_Store
