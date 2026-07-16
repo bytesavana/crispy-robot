@@ -46,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="location-permission" />
           <Stack.Screen name="(drawer)" />
+          <Stack.Screen name="auth" options={{ presentation: "modal" }} />
           <Stack.Screen
             name="cart-modal"
             options={{

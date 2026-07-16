@@ -14,9 +14,10 @@ const config: ExpoConfig = {
   android: {
     package: "com.mtaapal.app",
   },
-  plugins: ["expo-router", "expo-location", "expo-font"],
+  plugins: ["expo-router", "expo-location", "expo-font", "expo-secure-store"],
   extra: {
     agentApiUrl: process.env.EXPO_PUBLIC_AGENT_API_URL ?? "http://localhost:8000",
+    identityServerUrl: process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL ?? "http://localhost:5066",
   },
 };
 

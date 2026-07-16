@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import * as Crypto from "expo-crypto";
 import type { AgentSubscriber, Message as AgUiMessage } from "@ag-ui/client";
 
-import { getAgent } from "./agUiClient";
+import { getAgent, syncAgentHeaders } from "./agUiClient";
 
 export type ChatMessage = {
   id: string;
@@ -62,8 +62,8 @@ export function useMtaaPalChat() {
         },
       };
 
-      agent
-        .runAgent({}, subscriber)
+      syncAgentHeaders()
+        .then(() => agent.runAgent({}, subscriber))
         .catch((e) => {
           console.error(e ?? FRIENDLY_ERROR_MESSAGE);
           appendErrorMessage(FRIENDLY_ERROR_MESSAGE);

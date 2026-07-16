@@ -4,3 +4,4 @@ allowBuilds:
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - react-native-screens@4.26.1
+  - expo-secure-store@57.0.1
