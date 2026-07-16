@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { CartTaskRow } from "@/components/CartTaskRow";
 import type { Cart } from "@/lib/cartTypes";
-import { colors, radii, spacing, typography } from "@/theme";
+import { colors, spacing, typography } from "@/theme";
 
 type CartSheetProps = {
   cart: Cart;
@@ -39,10 +39,8 @@ export function CartSheet({ cart, onCollapse }: CartSheetProps) {
 
 const styles = StyleSheet.create({
   sheet: {
+    flex: 1,
     backgroundColor: colors.background,
-    borderTopLeftRadius: radii.lg,
-    borderTopRightRadius: radii.lg,
-    maxHeight: "70%",
     paddingTop: spacing.md,
   },
   header: {

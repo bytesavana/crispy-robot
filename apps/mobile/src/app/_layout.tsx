@@ -46,6 +46,15 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="location-permission" />
           <Stack.Screen name="(drawer)" />
+          <Stack.Screen
+            name="cart-modal"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: "fitToContents",
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
