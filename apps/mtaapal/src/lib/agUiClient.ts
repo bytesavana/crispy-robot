@@ -1,7 +1,8 @@
+import type { AgentSubscriber } from "@ag-ui/client";
 import { HttpAgent } from "@ag-ui/client";
 import Constants from "expo-constants";
 
-import { getAccessToken } from "./auth";
+import { getAccessToken, refreshAccessToken } from "./auth";
 import { getDeviceId } from "./deviceId";
 import { HARDCODED_ZONE_NAME } from "./identity";
 import { getThreadId } from "./session";
@@ -36,4 +37,25 @@ export async function syncAgentHeaders(): Promise<void> {
   a.headers = token
     ? { Authorization: `Bearer ${token}`, "X-Zone-Name": HARDCODED_ZONE_NAME }
     : { "X-Customer-Id": await getDeviceId(), "X-Zone-Name": HARDCODED_ZONE_NAME };
+}
+
+/**
+ * Runs the agent with fresh headers, transparently retrying once after refreshing the access
+ * token if the backend rejects it with a 401 (e.g. "Signature has expired"). Guests have no
+ * refresh token, so refreshAccessToken() is a no-op for them and the original 401 propagates.
+ */
+export async function runAgentWithAuth(subscriber: AgentSubscriber): Promise<void> {
+  const a = getAgent();
+  await syncAgentHeaders();
+  try {
+    await a.runAgent({}, subscriber);
+  } catch (error) {
+    if ((error as { status?: number } | undefined)?.status !== 401) throw error;
+
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) throw error;
+
+    await syncAgentHeaders();
+    await a.runAgent({}, subscriber);
+  }
 }

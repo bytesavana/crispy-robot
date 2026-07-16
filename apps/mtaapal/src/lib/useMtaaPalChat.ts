@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import * as Crypto from "expo-crypto";
 import type { AgentSubscriber, Message as AgUiMessage } from "@ag-ui/client";
 
-import { getAgent, syncAgentHeaders } from "./agUiClient";
+import { getAgent, runAgentWithAuth } from "./agUiClient";
 
 export type ChatMessage = {
   id: string;
@@ -10,8 +10,7 @@ export type ChatMessage = {
   text: string;
 };
 
-const FRIENDLY_ERROR_MESSAGE =
-  "Couldn't reach MtaaPal — check that the backend is running and reachable.";
+const FRIENDLY_ERROR_MESSAGE = "Something went wrong — please try again.";
 
 function contentToText(content: AgUiMessage["content"]): string {
   return typeof content === "string" ? content : "";
@@ -62,8 +61,7 @@ export function useMtaaPalChat() {
         },
       };
 
-      syncAgentHeaders()
-        .then(() => agent.runAgent({}, subscriber))
+      runAgentWithAuth(subscriber)
         .catch((e) => {
           console.error(e ?? FRIENDLY_ERROR_MESSAGE);
           appendErrorMessage(FRIENDLY_ERROR_MESSAGE);
