@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  apps/mobile:
+  apps/mtaapal:
     dependencies:
       '@ag-ui/client':
         specifier: ^0.0.57

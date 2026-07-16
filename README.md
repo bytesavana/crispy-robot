@@ -1,11 +1,11 @@
 # crispy-robot
 
-MtaaPal client apps — a pnpm workspace. Currently one app: `apps/mobile`, the MtaaPal React
+MtaaPal client apps — a pnpm workspace. Currently one app: `apps/mtaapal`, the MtaaPal React
 Native/Expo chat client.
 
 ## Architecture
 
-`apps/mobile` is a chat UI (onboarding → location permission → home chat → drawer history →
+`apps/mtaapal` is a chat UI (onboarding → location permission → home chat → drawer history →
 thread detail) that talks to the `didactic-invention` agent backend over the **AG-UI protocol**.
 
 There is no official React Native client for AG-UI yet, and this app deliberately doesn't depend
@@ -13,14 +13,14 @@ on assistant-ui (its React Native package pulls in a broken `assistant-cloud` im
 
 - `@ag-ui/client`'s `HttpAgent` handles the wire protocol directly (POSTs `RunAgentInput`, parses
   the SSE event stream, keeps the running message list).
-- `apps/mobile/src/lib/useMtaaPalChat.ts` is a small hook that drives one `HttpAgent` thread —
+- `apps/mtaapal/src/lib/useMtaaPalChat.ts` is a small hook that drives one `HttpAgent` thread —
   sends messages, subscribes to streamed text/error events, and exposes plain `{id, role, text}`
   messages to the UI.
 - Chat UI (`HomeChatScreen`, `ChatMessages`) is plain React Native (`FlatList`, `TextInput`,
   `Pressable`) rendering those messages — no chat-framework layer in between.
 
 Auth doesn't exist yet on the backend (`X-Customer-Id`/`X-Zone-Name` headers are a documented
-placeholder there), so this app hardcodes them — see `apps/mobile/src/lib/identity.ts`.
+placeholder there), so this app hardcodes them — see `apps/mtaapal/src/lib/identity.ts`.
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ cd ../didactic-invention
 uv run dev
 
 # Terminal 2 — app
-cd apps/mobile
+cd apps/mtaapal
 pnpm start
 ```
 
@@ -52,7 +52,7 @@ Then press `i` (iOS simulator), `a` (Android emulator), or scan the QR code with
 physical device.
 
 **Physical device gotcha**: `http://localhost:8000` resolves to the phone itself, not your dev
-machine. Copy `apps/mobile/.env.example` to `apps/mobile/.env` and set:
+machine. Copy `apps/mtaapal/.env.example` to `apps/mtaapal/.env` and set:
 
 ```
 EXPO_PUBLIC_AGENT_API_URL=http://<your-machine-lan-ip>:8000
@@ -74,7 +74,7 @@ Find your LAN IP on macOS with `ipconfig getifaddr en0`. Restart `pnpm start` af
 ## Project layout
 
 ```
-apps/mobile/
+apps/mtaapal/
   app.config.ts          # Expo config; reads EXPO_PUBLIC_AGENT_API_URL
   src/
     app/                  # expo-router routes (onboarding, location-permission, (drawer)/*)
