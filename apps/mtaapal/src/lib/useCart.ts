@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
-import { getAgent } from "./agUiClient";
+import { getAgent, subscribeAgent } from "./agUiClient";
 import type { Cart } from "./cartTypes";
 
 function extractCart(state: unknown): Cart | undefined {
@@ -16,9 +16,21 @@ function extractCart(state: unknown): Cart | undefined {
  * Not persisted across app restarts, matching the rest of the session state.
  */
 export function useCart(): Cart | undefined {
-  const agent = getAgent();
+  const agent = useSyncExternalStore(subscribeAgent, getAgent, getAgent);
   const [cart, setCart] = useState<Cart | undefined>(() => extractCart(agent.state));
 
+  // Re-sync whenever the agent singleton is rebound (new/resumed conversation). Adjusting
+  // state during render (not in an effect) per React's guidance for "reset state when a
+  // value changes" — avoids an extra commit/render pass from a useEffect setState.
+  const [syncedAgent, setSyncedAgent] = useState(agent);
+  if (agent !== syncedAgent) {
+    setSyncedAgent(agent);
+    setCart(extractCart(agent.state));
+  }
+
+  // Resubscribing is a genuine side effect (registering a callback with an external
+  // object), so this part stays in an effect; it only calls setState from the callback,
+  // never synchronously in the effect body.
   useEffect(() => {
     const { unsubscribe } = agent.subscribe({
       onStateChanged({ state }) {

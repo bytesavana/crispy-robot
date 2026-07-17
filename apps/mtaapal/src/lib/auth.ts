@@ -3,6 +3,8 @@ import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
+import { resetDeviceId } from "./deviceId";
+
 const ACCESS_TOKEN_KEY = "mtaapal.accessToken";
 const REFRESH_TOKEN_KEY = "mtaapal.refreshToken";
 
@@ -122,11 +124,13 @@ export async function activate(identifier: string, code: string): Promise<void> 
     scope: SCOPE,
   });
   await storeTokens(tokens);
+  await resetDeviceId();
 }
 
 export async function verifyLogin(identifier: string, code: string): Promise<void> {
   const tokens = await postToken({ grant_type: "otp", client_id: CLIENT_ID, identifier, code, scope: SCOPE });
   await storeTokens(tokens);
+  await resetDeviceId();
 }
 
 export function getAccessToken(): Promise<string | null> {
@@ -154,6 +158,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 export async function signOut(): Promise<void> {
   await tokenStorage.deleteItemAsync(ACCESS_TOKEN_KEY);
   await tokenStorage.deleteItemAsync(REFRESH_TOKEN_KEY);
+  await resetDeviceId();
 }
 
 /** Null when signed out. Reads the signed-in account's display info straight off the access

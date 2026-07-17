@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { startNewConversation, switchToConversation } from "@/lib/agUiClient";
 import { type AccountInfo, getAccountInfo, signOut } from "@/lib/auth";
-import { mockHistory } from "@/lib/mockHistory";
+import { type Conversation, fetchConversation, fetchConversations } from "@/lib/conversationsApi";
 import { colors, radii, spacing, typography } from "@/theme";
 
 // No dedicated screens exist yet for these — tapping one just closes the menu, per the app's
@@ -21,9 +22,25 @@ const ACCOUNT_MENU_ITEMS = [
   "Help & support",
 ] as const;
 
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export function HistoryDrawerContent({ navigation }: DrawerContentComponentProps) {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [menuExpanded, setMenuExpanded] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [resumingThreadId, setResumingThreadId] = useState<string | null>(null);
 
   const refreshAccount = useCallback(() => {
     getAccountInfo()
@@ -31,22 +48,54 @@ export function HistoryDrawerContent({ navigation }: DrawerContentComponentProps
       .catch(() => setAccount(null));
   }, []);
 
+  const refreshConversations = useCallback(() => {
+    fetchConversations()
+      .then(setConversations)
+      .catch(() => setConversations([]))
+      .finally(() => setLoadingConversations(false));
+  }, []);
+
   useEffect(() => {
     refreshAccount();
+    refreshConversations();
     // Drawer content doesn't unmount between opens, so re-check on every focus (e.g. after
-    // returning from the sign-in flow). The navigation prop's addListener is under-typed here
-    // across the expo-router/react-navigation version boundary, but is a stable runtime API.
+    // returning from the sign-in flow, or after sending a message). The navigation prop's
+    // addListener is under-typed here across the expo-router/react-navigation version
+    // boundary, but is a stable runtime API.
     const unsubscribe = (
       navigation as unknown as { addListener: (event: "focus", callback: () => void) => () => void }
-    ).addListener("focus", refreshAccount);
+    ).addListener("focus", () => {
+      refreshAccount();
+      refreshConversations();
+    });
     return unsubscribe;
-  }, [navigation, refreshAccount]);
+  }, [navigation, refreshAccount, refreshConversations]);
 
   const handleSignOut = () => {
     signOut().then(() => {
       setAccount(null);
       setMenuExpanded(false);
+      // Sign-out rotates the device id (see auth.ts), so the drawer's list — and the
+      // active chat, which would otherwise keep posting to a thread owned by the
+      // now-signed-out identity — both need to start fresh under the new guest id.
+      startNewConversation();
+      refreshConversations();
     });
+  };
+
+  const handleSelectConversation = async (threadId: string) => {
+    if (resumingThreadId) return;
+    setResumingThreadId(threadId);
+    try {
+      const { messages, state } = await fetchConversation(threadId);
+      switchToConversation(threadId, messages, state);
+      navigation.closeDrawer();
+      router.push("/");
+    } catch {
+      // Best-effort: leave the drawer open so the user can retry the tap.
+    } finally {
+      setResumingThreadId(null);
+    }
   };
 
   return (
@@ -60,19 +109,27 @@ export function HistoryDrawerContent({ navigation }: DrawerContentComponentProps
 
       <Text style={styles.sectionLabel}>HISTORY</Text>
       <ScrollView contentContainerStyle={styles.list}>
-        {mockHistory.map((entry) => (
-          <Pressable
-            key={entry.id}
-            style={({ pressed }) => [styles.historyRow, pressed && styles.historyRowPressed]}
-            onPress={() => {
-              navigation.closeDrawer();
-              router.push(`/thread/${entry.id}`);
-            }}
-          >
-            <Text style={styles.historyTitle}>{entry.title}</Text>
-            <Text style={styles.historyStatus}>{entry.statusLine}</Text>
-          </Pressable>
-        ))}
+        {loadingConversations ? (
+          <ActivityIndicator color={colors.textMuted} />
+        ) : conversations.length === 0 ? (
+          <Text style={styles.historyStatus}>No conversations yet</Text>
+        ) : (
+          conversations.map((entry) => (
+            <Pressable
+              key={entry.threadId}
+              style={({ pressed }) => [styles.historyRow, pressed && styles.historyRowPressed]}
+              onPress={() => handleSelectConversation(entry.threadId)}
+              disabled={resumingThreadId !== null}
+            >
+              <Text style={styles.historyTitle}>{entry.title ?? "New conversation"}</Text>
+              <Text style={styles.historyStatus}>
+                {resumingThreadId === entry.threadId
+                  ? "Opening…"
+                  : formatRelativeTime(entry.updatedAt)}
+              </Text>
+            </Pressable>
+          ))
+        )}
       </ScrollView>
 
       <View style={styles.footer}>

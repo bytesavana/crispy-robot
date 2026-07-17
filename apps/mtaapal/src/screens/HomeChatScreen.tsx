@@ -19,6 +19,7 @@ import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
 import { QuickActionCard } from "@/components/QuickActionCard";
 import { ZonePill } from "@/components/ZonePill";
+import { startNewConversation } from "@/lib/agUiClient";
 import { useCart } from "@/lib/useCart";
 import { useMtaaPalChat } from "@/lib/useMtaaPalChat";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -56,7 +57,13 @@ export function HomeChatScreen() {
           </View>
           <Text style={styles.brand}>MtaaPal</Text>
         </View>
-        <Pressable hitSlop={12}>
+        <Pressable
+          hitSlop={12}
+          onPress={() => {
+            startNewConversation();
+            setInput("");
+          }}
+        >
           <Ionicons name="add" size={22} color={colors.text} />
         </Pressable>
       </View>

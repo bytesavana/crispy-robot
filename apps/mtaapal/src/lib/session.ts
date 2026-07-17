@@ -14,6 +14,17 @@ export function getThreadId(): string {
   return threadId;
 }
 
+/** Rotates to a brand-new thread id (used by "start a new conversation"). */
+export function newThreadId(): string {
+  threadId = Crypto.randomUUID();
+  return threadId;
+}
+
+/** Switches to an existing thread id (used by "resume a past conversation"). */
+export function setThreadId(id: string): void {
+  threadId = id;
+}
+
 export function newRunId(): string {
   return Crypto.randomUUID();
 }

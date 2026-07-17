@@ -1,18 +1,19 @@
-import type { AgentSubscriber } from "@ag-ui/client";
+import type { AgentSubscriber, Message } from "@ag-ui/client";
 import { HttpAgent } from "@ag-ui/client";
 import Constants from "expo-constants";
 
 import { getAccessToken, refreshAccessToken } from "./auth";
 import { getDeviceId } from "./deviceId";
 import { HARDCODED_ZONE_NAME } from "./identity";
-import { getThreadId } from "./session";
+import { getThreadId, newThreadId, setThreadId } from "./session";
 
-function getAgentApiUrl(): string {
+export function getAgentApiUrl(): string {
   const extra = Constants.expoConfig?.extra as { agentApiUrl?: string } | undefined;
   return extra?.agentApiUrl ?? "http://localhost:8000";
 }
 
 let agent: HttpAgent | null = null;
+const agentListeners = new Set<() => void>();
 
 /** One HttpAgent instance per app session, bound to the session's thread_id. */
 export function getAgent(): HttpAgent {
@@ -26,17 +27,64 @@ export function getAgent(): HttpAgent {
 }
 
 /**
+ * Subscribes to the agent singleton being rebound to a different thread (new or resumed
+ * conversation). Pairs with `useSyncExternalStore(subscribeAgent, getAgent, getAgent)` so
+ * components re-render with the fresh instance instead of holding a stale reference.
+ */
+export function subscribeAgent(listener: () => void): () => void {
+  agentListeners.add(listener);
+  return () => agentListeners.delete(listener);
+}
+
+function rebindAgent(
+  threadId: string,
+  initialMessages?: Message[],
+  initialState?: Record<string, unknown>,
+): void {
+  agent = new HttpAgent({
+    url: `${getAgentApiUrl()}/agent`,
+    threadId,
+    initialMessages,
+    initialState,
+  });
+  agentListeners.forEach((listener) => listener());
+}
+
+/** Starts a brand-new conversation: fresh thread id, empty chat/cart. */
+export function startNewConversation(): void {
+  rebindAgent(newThreadId());
+}
+
+/** Resumes a past conversation, seeding the chat with its real message history and state
+ * (cart, zone, offerings, ...) instead of just the transcript. */
+export function switchToConversation(
+  threadId: string,
+  messages: Message[],
+  state?: Record<string, unknown>,
+): void {
+  setThreadId(threadId);
+  rebindAgent(threadId, messages, state);
+}
+
+/**
+ * Signed-in users send their auth token and nothing else; guests send the persisted
+ * per-install device id — never both, so the backend can't confuse a guest for a
+ * signed-in user or vice versa. Shared by the agent and the plain conversations fetch.
+ */
+export async function buildIdentityHeaders(): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  return token
+    ? { Authorization: `Bearer ${token}`, "X-Zone-Name": HARDCODED_ZONE_NAME }
+    : { "X-Customer-Id": await getDeviceId(), "X-Zone-Name": HARDCODED_ZONE_NAME };
+}
+
+/**
  * HttpAgent.headers is a mutable property re-read fresh on every request, so this can run
- * right before each runAgent() call instead of only at construction time. Signed-in users send
- * their auth token and nothing else; guests send the persisted per-install device id — never
- * both, so the backend can't confuse a guest for a signed-in user or vice versa.
+ * right before each runAgent() call instead of only at construction time.
  */
 export async function syncAgentHeaders(): Promise<void> {
   const a = getAgent();
-  const token = await getAccessToken();
-  a.headers = token
-    ? { Authorization: `Bearer ${token}`, "X-Zone-Name": HARDCODED_ZONE_NAME }
-    : { "X-Customer-Id": await getDeviceId(), "X-Zone-Name": HARDCODED_ZONE_NAME };
+  a.headers = await buildIdentityHeaders();
 }
 
 /**

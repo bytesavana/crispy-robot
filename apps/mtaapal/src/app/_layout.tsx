@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { refreshAccessToken } from "@/lib/auth";
 import { colors } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -28,6 +29,14 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    // Proactively refresh on launch instead of waiting for the first request to hit a 401 —
+    // the access token is short-lived (15 min), so it's often already stale by the time the
+    // user sends their first message. A no-op for guests: refreshAccessToken() only acts when
+    // a refresh token is stored, and silently signs out if that refresh token has expired.
+    refreshAccessToken().catch(() => {});
+  }, []);
 
   if (!fontsLoaded) {
     return null;

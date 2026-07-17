@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import * as Crypto from "expo-crypto";
 import type { AgentSubscriber, Message as AgUiMessage } from "@ag-ui/client";
 
-import { getAgent, runAgentWithAuth } from "./agUiClient";
+import { getAgent, runAgentWithAuth, subscribeAgent } from "./agUiClient";
 
 export type ChatMessage = {
   id: string;
@@ -31,9 +31,19 @@ function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
 
 /** Drives one AG-UI thread directly against @ag-ui/client's HttpAgent — no chat UI framework involved. */
 export function useMtaaPalChat() {
-  const agent = getAgent();
+  const agent = useSyncExternalStore(subscribeAgent, getAgent, getAgent);
   const [messages, setMessages] = useState<ChatMessage[]>(() => toDisplayMessages(agent.messages));
   const [isRunning, setIsRunning] = useState(false);
+
+  // Re-sync local state whenever the agent singleton is rebound (new/resumed conversation).
+  // Adjusting state during render (not in an effect) per React's guidance for "reset state
+  // when a value changes" — avoids an extra commit/render pass from a useEffect setState.
+  const [syncedAgent, setSyncedAgent] = useState(agent);
+  if (agent !== syncedAgent) {
+    setSyncedAgent(agent);
+    setMessages(toDisplayMessages(agent.messages));
+    setIsRunning(false);
+  }
 
   const appendErrorMessage = useCallback(
     (text: string) => {

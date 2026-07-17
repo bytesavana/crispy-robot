@@ -23,3 +23,16 @@ export async function getDeviceId(): Promise<string> {
   deviceId = generated;
   return generated;
 }
+
+/**
+ * Rotates to a brand-new device id, discarding the old one. Called on both sign-in and
+ * sign-out so a device id is never shared across identity boundaries — a guest's id is gone
+ * once they authenticate, and signing out never lets a future guest session reuse the id
+ * that was active while signed in.
+ */
+export async function resetDeviceId(): Promise<string> {
+  const generated = Crypto.randomUUID();
+  await AsyncStorage.setItem(DEVICE_ID_KEY, generated);
+  deviceId = generated;
+  return generated;
+}
