@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { refreshAccessToken } from "@/lib/auth";
+import { registerForPushNotificationsAsync, setupTaskEventNotificationListeners } from "@/lib/pushNotifications";
 import { colors } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -36,6 +37,11 @@ export default function RootLayout() {
     // user sends their first message. A no-op for guests: refreshAccessToken() only acts when
     // a refresh token is stored, and silently signs out if that refresh token has expired.
     refreshAccessToken().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().catch(() => {});
+    return setupTaskEventNotificationListeners();
   }, []);
 
   if (!fontsLoaded) {

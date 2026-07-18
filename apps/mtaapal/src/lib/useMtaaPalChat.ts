@@ -6,8 +6,10 @@ import { getAgent, runAgentWithAuth, subscribeAgent } from "./agUiClient";
 
 export type ChatMessage = {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "activity";
   text: string;
+  /** Only set for role "activity" — e.g. "arrived", "purchasing", "provider_assigned". */
+  activityType?: string;
 };
 
 const FRIENDLY_ERROR_MESSAGE = "Something went wrong — please try again.";
@@ -17,16 +19,19 @@ function contentToText(content: AgUiMessage["content"]): string {
 }
 
 function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
-  return messages
-    .filter(
-      (message): message is AgUiMessage & { role: "user" | "assistant" } =>
-        message.role === "user" || message.role === "assistant",
-    )
-    .map((message) => ({
-      id: message.id,
-      role: message.role,
-      text: contentToText(message.content),
-    }));
+  return messages.flatMap((message): ChatMessage[] => {
+    if (message.role === "user" || message.role === "assistant") {
+      return [{ id: message.id, role: message.role, text: contentToText(message.content) }];
+    }
+    // A silent status update from a background fulfillment event (see
+    // effective-happiness/didactic-invention) — never part of the model's own turn, so it's
+    // rendered as a status line, not a chat bubble.
+    if (message.role === "activity") {
+      const text = typeof message.content.message === "string" ? message.content.message : "";
+      return [{ id: message.id, role: "activity", activityType: message.activityType, text }];
+    }
+    return [];
+  });
 }
 
 /** Drives one AG-UI thread directly against @ag-ui/client's HttpAgent — no chat UI framework involved. */

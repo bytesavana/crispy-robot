@@ -26,9 +26,12 @@ function toConversation(dto: ConversationDto): Conversation {
   };
 }
 
-async function fetchWithAuthRetry<T>(path: string): Promise<T> {
+async function fetchWithAuthRetry<T>(path: string, init?: RequestInit): Promise<T> {
   const request = async (): Promise<Response> =>
-    fetch(`${getAgentApiUrl()}${path}`, { headers: await buildIdentityHeaders() });
+    fetch(`${getAgentApiUrl()}${path}`, {
+      ...init,
+      headers: { ...(await buildIdentityHeaders()), ...init?.headers },
+    });
 
   let response = await request();
   if (response.status === 401) {
@@ -38,7 +41,7 @@ async function fetchWithAuthRetry<T>(path: string): Promise<T> {
   if (!response.ok) {
     throw new Error(`Request to ${path} failed (${response.status})`);
   }
-  return response.json() as Promise<T>;
+  return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }
 
 export async function fetchConversations(): Promise<Conversation[]> {
@@ -56,4 +59,16 @@ export type ConversationResume = {
  * offerings, ...), not just the transcript. */
 export async function fetchConversation(threadId: string): Promise<ConversationResume> {
   return fetchWithAuthRetry<ConversationResume>(`/conversations/${threadId}`);
+}
+
+/** Registers this device's Expo push token against the signed-in customer (or guest device
+ * id) — idempotent server-side, so safe to call on every app start/sign-in. Lets the backend
+ * push a notification when a background fulfillment event (see effective-happiness) needs the
+ * app to refresh an open or backgrounded conversation. */
+export async function registerPushToken(token: string): Promise<void> {
+  await fetchWithAuthRetry<void>("/push-tokens", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
 }

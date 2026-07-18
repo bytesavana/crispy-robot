@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "197335688800",
+    "project_id": "mtaapal-5a5a5",
+    "storage_bucket": "mtaapal-5a5a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:197335688800:android:e2a2acd362f3594f028505",
+        "android_client_info": {
+          "package_name": "com.mtaapal.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjU7k-gK6-oVfBtf7Lr1XpQZwTjRe5tlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

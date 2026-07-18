@@ -148,5 +148,8 @@ apps/*/ios/
 apps/*/android/
 apps/*/expo-env.d.ts
 
+# Firebase service account keys (sensitive - never commit)
+*firebase-adminsdk*.json
+
 # macOS
 .DS_Store
