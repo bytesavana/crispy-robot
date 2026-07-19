@@ -49,7 +49,7 @@ export function RequestLookupPage() {
     setLoading(true)
     try {
       const req = await getRequestByAgentRef(agentRef, customerId)
-      navigate(`/requests/${req.id}?customerId=${encodeURIComponent(customerId)}`)
+      navigate(`/requests/${req.id}`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to find request by agent ref.')
     } finally {
@@ -138,7 +138,7 @@ export function RequestLookupPage() {
                   <TableRow
                     key={r.id}
                     className="cursor-pointer"
-                    onClick={() => navigate(`/requests/${r.id}?customerId=${encodeURIComponent(customerId)}`)}
+                    onClick={() => navigate(`/requests/${r.id}`)}
                   >
                     <TableCell className="font-mono text-xs">{r.agentRef}</TableCell>
                     <TableCell className="text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</TableCell>

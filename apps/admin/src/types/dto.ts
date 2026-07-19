@@ -165,6 +165,36 @@ export interface RequestRefRequest {
   agentRef?: string | null
 }
 
+export interface ServiceTaskStatusEventDto {
+  id: string
+  fromStatus?: string | null
+  toStatus: string
+  reason?: string | null
+  occurredAt: string
+}
+
+export interface ServiceTaskUpdateDto {
+  id: string
+  serviceTaskId: string
+  kind: string
+  activityType: string
+  message: string
+  occurredAt: string
+}
+
+export interface AdminServiceTaskDto extends ServiceTaskDto {
+  statusEvents: ServiceTaskStatusEventDto[]
+  updates: ServiceTaskUpdateDto[]
+}
+
+export interface AdminServiceRequestDto {
+  id: string
+  customerId: string
+  agentRef: string
+  createdAt: string
+  tasks: AdminServiceTaskDto[]
+}
+
 export interface AcceptProviderOfferRequest {
   taskId: string
   offerId: string

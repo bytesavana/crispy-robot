@@ -1,5 +1,6 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Ban, Check, PlayCircle, UserPlus, XCircle } from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Ban, Check, MessageCircleQuestion, PlayCircle, UserPlus, XCircle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -9,32 +10,39 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { ConfirmActionButton } from '@/components/ConfirmActionButton'
 import { TextPromptButton } from '@/components/TextPromptButton'
 import { useAsync } from '@/lib/hooks/useAsync'
-import {
-  assignTask,
-  cancelTask,
-  completeTask,
-  confirmRequest,
-  failTask,
-  startTask,
-} from '@/lib/api/requests'
-import { getRequest } from '@/lib/api/requests'
+import { getAdminRequestDetail } from '@/lib/api/admin'
+import { assignTask, cancelTask, completeTask, confirmRequest, failTask, startTask } from '@/lib/api/requests'
+import type { AdminServiceTaskDto } from '@/types/dto'
+
+type TimelineEntry =
+  | { kind: 'status'; occurredAt: string; fromStatus: string | null | undefined; toStatus: string; reason?: string | null }
+  | { kind: 'update'; occurredAt: string; updateKind: string; activityType: string; message: string }
+
+function buildTimeline(task: AdminServiceTaskDto): TimelineEntry[] {
+  const entries: TimelineEntry[] = [
+    ...task.statusEvents.map(
+      (e): TimelineEntry => ({ kind: 'status', occurredAt: e.occurredAt, fromStatus: e.fromStatus, toStatus: e.toStatus, reason: e.reason }),
+    ),
+    ...task.updates.map(
+      (u): TimelineEntry => ({ kind: 'update', occurredAt: u.occurredAt, updateKind: u.kind, activityType: u.activityType, message: u.message }),
+    ),
+  ]
+  return entries.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+}
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [searchParams] = useSearchParams()
-  const customerId = searchParams.get('customerId') ?? ''
-
-  const { data: req, loading, error, refetch } = useAsync(() => getRequest(id!, customerId), [id, customerId])
+  const { data: req, loading, error, refetch } = useAsync(() => getAdminRequestDetail(id!), [id])
+  const customerId = req?.customerId ?? ''
 
   return (
     <div className="flex flex-col gap-4">
       <Button variant="ghost" size="sm" className="w-fit" asChild>
-        <Link to={`/requests/lookup?customerId=${encodeURIComponent(customerId)}`}>
+        <Link to={customerId ? `/requests/lookup?customerId=${encodeURIComponent(customerId)}` : '/requests/lookup'}>
           <ArrowLeft className="size-4" /> Back to lookup
         </Link>
       </Button>
 
-      {!customerId && <ErrorAlert message="No customer id in the URL — open this page via the request lookup flow." />}
       {error && <ErrorAlert message={error} />}
       {loading && <Skeleton className="h-64 w-full" />}
 
@@ -152,6 +160,49 @@ export function RequestDetailPage() {
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity &amp; status history</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-6">
+              {req.tasks.map((task) => {
+                const timeline = buildTimeline(task)
+                return (
+                  <div key={task.id} className="flex flex-col gap-2">
+                    <p className="text-sm font-medium">{task.taskCode}</p>
+                    {timeline.length === 0 && <p className="text-sm text-muted-foreground">No history yet.</p>}
+                    <ul className="flex flex-col gap-2">
+                      {timeline.map((entry, i) => (
+                        <li key={i} className="flex items-start justify-between gap-3 text-sm">
+                          {entry.kind === 'status' ? (
+                            <span className="flex items-center gap-1.5">
+                              <Badge variant="secondary">Status</Badge>
+                              {entry.fromStatus ?? 'created'} → <span className="font-medium">{entry.toStatus}</span>
+                              {entry.reason && <span className="text-muted-foreground">({entry.reason})</span>}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5">
+                              <Badge variant={entry.updateKind === 'Question' ? 'destructive' : 'outline'}>
+                                {entry.updateKind === 'Question' ? (
+                                  <MessageCircleQuestion className="size-3" />
+                                ) : null}
+                                {entry.activityType}
+                              </Badge>
+                              {entry.message}
+                            </span>
+                          )}
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {new Date(entry.occurredAt).toLocaleString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         </>
