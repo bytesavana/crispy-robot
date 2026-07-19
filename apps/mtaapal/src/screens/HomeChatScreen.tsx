@@ -12,7 +12,8 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CartPanel } from "@/components/CartPanel";
 import { CartSidebar } from "@/components/CartSidebar";
@@ -42,13 +43,27 @@ export function HomeChatScreen() {
   const { width } = useWindowDimensions();
   const isWideScreen = width >= WIDE_SCREEN_BREAKPOINT;
 
+  // On Android, RN's core Keyboard module (which KeyboardAvoidingView's "height"/"padding"
+  // behaviors rely on) doesn't track the keyboard reliably once edge-to-edge is enabled —
+  // the window no longer resizes, so KeyboardAvoidingView never sees a size change. Reanimated's
+  // useAnimatedKeyboard reads the real WindowInsets animation instead, so it stays accurate.
+  const keyboard = useAnimatedKeyboard();
+  const insets = useSafeAreaInsets();
+  const androidKeyboardPadding = useAnimatedStyle(() => ({
+    // keyboard.height is measured from the very bottom of the screen, which already overlaps
+    // the bottom safe-area inset (nav bar) that SafeAreaView reserves when the keyboard is
+    // closed. Subtract it so the composer isn't pushed up by that inset twice.
+    paddingBottom:
+      Platform.OS === "android" ? Math.max(keyboard.height.value - insets.bottom, 0) : 0,
+  }));
+
   const submit = (text: string) => {
     sendMessage(text);
     setInput("");
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <DrawerToggleButton tintColor={colors.text} />
         <View style={styles.brandRow}>
@@ -76,47 +91,49 @@ export function HomeChatScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
-          {messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.greeting}>{"Good evening.\nWhat can I help with?"}</Text>
-              <View style={styles.grid}>
-                {quickActions.map((action) => (
-                  <Pressable
-                    key={action.label}
-                    onPress={() => submit(action.label)}
-                    style={({ pressed }) => [styles.cardWrapper, pressed && styles.cardPressed]}
-                  >
-                    <QuickActionCard label={action.label} dotColor={action.dotColor} />
-                  </Pressable>
-                ))}
+          <Animated.View style={[styles.flex, androidKeyboardPadding]}>
+            {messages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.greeting}>{"Good evening.\nWhat can I help with?"}</Text>
+                <View style={styles.grid}>
+                  {quickActions.map((action) => (
+                    <Pressable
+                      key={action.label}
+                      onPress={() => submit(action.label)}
+                      style={({ pressed }) => [styles.cardWrapper, pressed && styles.cardPressed]}
+                    >
+                      <QuickActionCard label={action.label} dotColor={action.dotColor} />
+                    </Pressable>
+                  ))}
+                </View>
               </View>
+            ) : (
+              <FlatList
+                style={styles.flex}
+                contentContainerStyle={styles.messagesContent}
+                data={messages}
+                keyExtractor={(message) => message.id}
+                renderItem={({ item }) => <ChatMessageItem message={item} />}
+              />
+            )}
+
+            {!isWideScreen && <CartPanel cart={cart} />}
+
+            <View style={styles.composer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Message MtaaPal..."
+                placeholderTextColor={colors.textMuted}
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={() => submit(input)}
+                returnKeyType="send"
+              />
+              <Pressable style={styles.sendButton} onPress={() => submit(input)}>
+                <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
+              </Pressable>
             </View>
-          ) : (
-            <FlatList
-              style={styles.flex}
-              contentContainerStyle={styles.messagesContent}
-              data={messages}
-              keyExtractor={(message) => message.id}
-              renderItem={({ item }) => <ChatMessageItem message={item} />}
-            />
-          )}
-
-          {!isWideScreen && <CartPanel cart={cart} />}
-
-          <View style={styles.composer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Message MtaaPal..."
-              placeholderTextColor={colors.textMuted}
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={() => submit(input)}
-              returnKeyType="send"
-            />
-            <Pressable style={styles.sendButton} onPress={() => submit(input)}>
-              <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
-            </Pressable>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
 
         {isWideScreen && cart ? <CartSidebar cart={cart} /> : null}
