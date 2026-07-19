@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@11.13.0",
   "scripts": {
-    "mtaapal": "pnpm --filter mtaapal"
+    "mtaapal": "pnpm --filter mtaapal",
+    "admin": "pnpm --filter admin"
   }
 }

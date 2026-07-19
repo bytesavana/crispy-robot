@@ -1,11 +1,11 @@
 # crispy-robot
 
-MtaaPal client apps — a pnpm workspace. Currently one app: `apps/mtaapal`, the MtaaPal React
-Native/Expo chat client.
+MtaaPal client apps — a pnpm workspace. Two apps: `apps/mtaapal`, the MtaaPal React Native/Expo
+chat client, and `apps/admin`, the internal ops web console.
 
-Everything below is run from the repo root using pnpm — either directly via `--filter mtaapal`,
-or the shorthand `pnpm mtaapal <command>` (defined in the root `package.json`), which is
-equivalent.
+Everything below is run from the repo root using pnpm — either directly via `--filter mtaapal` /
+`--filter admin`, or the shorthand `pnpm mtaapal <command>` / `pnpm admin <command>` (defined in
+the root `package.json`), which is equivalent.
 
 ## Install dependencies
 
@@ -88,6 +88,37 @@ then restart `pnpm mtaapal start`.
 ```sh
 pnpm mtaapal typecheck
 pnpm mtaapal lint
+```
+
+## Admin app
+
+`apps/admin` is a Vite + React web console for internal MtaaPal operations (catalog, providers,
+service requests, consumers). It calls the `effective-happiness` backend services directly from
+the browser — no proxy — so that backend must be running too, with CORS enabled for the four
+services it talks to (ServiceCatalog, ProviderRegistry, ServiceRequestOrchestrator, Consumers; see
+that repo's README).
+
+### Run the admin app
+
+```sh
+pnpm admin dev
+```
+
+Then open `http://localhost:5173` and sign in (`ops` / `mtaapal-admin` — a placeholder login for
+v1, not yet backed by IdentityServer). Copy `apps/admin/.env.example` to `apps/admin/.env` if you
+need to point at backend services running somewhere other than the default local ports.
+
+### Add a package
+
+```sh
+pnpm admin add <package>
+```
+
+### Typecheck and lint
+
+```sh
+pnpm admin typecheck
+pnpm admin lint
 ```
 
 ## EAS

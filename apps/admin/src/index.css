@@ -1,0 +1,132 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Brand palette mirrored from apps/mtaapal/src/theme/colors.ts, so the admin
+   console and the customer app read as the same product. */
+:root {
+    --background: #FBF1E7;
+    --foreground: #2B2320;
+    --card: #FFFFFF;
+    --card-foreground: #2B2320;
+    --popover: #FFFFFF;
+    --popover-foreground: #2B2320;
+    --primary: #C1602C;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F7E9DC;
+    --secondary-foreground: #2B2320;
+    --muted: #F7E9DC;
+    --muted-foreground: #8A7A6F;
+    --accent: #F6D3C1;
+    --accent-foreground: #2B2320;
+    --destructive: #B3261E;
+    --border: #EAD9C8;
+    --input: #EAD9C8;
+    --ring: #C1602C;
+    --chart-1: #C1602C;
+    --chart-2: #BFE0F2;
+    --chart-3: #A54F22;
+    --chart-4: #D2703A;
+    --chart-5: #8A7A6F;
+    --radius: 0.625rem;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #2B2320;
+    --sidebar-primary: #C1602C;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #F7E9DC;
+    --sidebar-accent-foreground: #2B2320;
+    --sidebar-border: #EAD9C8;
+    --sidebar-ring: #C1602C;
+}
+
+.dark {
+    --background: #201812;
+    --foreground: #F5E9DE;
+    --card: #2B2117;
+    --card-foreground: #F5E9DE;
+    --popover: #2B2117;
+    --popover-foreground: #F5E9DE;
+    --primary: #D2703A;
+    --primary-foreground: #201812;
+    --secondary: #3A2E22;
+    --secondary-foreground: #F5E9DE;
+    --muted: #3A2E22;
+    --muted-foreground: #B8A695;
+    --accent: #4A3626;
+    --accent-foreground: #F5E9DE;
+    --destructive: #E5534B;
+    --border: #4A3626;
+    --input: #4A3626;
+    --ring: #D2703A;
+    --chart-1: #D2703A;
+    --chart-2: #BFE0F2;
+    --chart-3: #C1602C;
+    --chart-4: #F6D3C1;
+    --chart-5: #B8A695;
+    --sidebar: #2B2117;
+    --sidebar-foreground: #F5E9DE;
+    --sidebar-primary: #D2703A;
+    --sidebar-primary-foreground: #201812;
+    --sidebar-accent: #3A2E22;
+    --sidebar-accent-foreground: #F5E9DE;
+    --sidebar-border: #4A3626;
+    --sidebar-ring: #D2703A;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}
