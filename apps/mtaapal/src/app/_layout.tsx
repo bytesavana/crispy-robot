@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { refreshAccessToken } from "@/lib/auth";
 import { registerForPushNotificationsAsync, setupTaskEventNotificationListeners } from "@/lib/pushNotifications";
 import { colors } from "@/theme";
+import { resolveZone } from "@/lib/zoneResolution";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -42,6 +43,13 @@ export default function RootLayout() {
   useEffect(() => {
     registerForPushNotificationsAsync().catch(() => {});
     return setupTaskEventNotificationListeners();
+  }, []);
+
+  useEffect(() => {
+    // Non-prompting: only resolves if permission was already granted in a past
+    // session. Runs every cold start so a returning user's zone reflects wherever
+    // they are now, without re-asking for permission.
+    resolveZone().catch(() => {});
   }, []);
 
   if (!fontsLoaded) {

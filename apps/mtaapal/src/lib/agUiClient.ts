@@ -1,16 +1,13 @@
 import type { AgentSubscriber, Message } from "@ag-ui/client";
 import { HttpAgent } from "@ag-ui/client";
-import Constants from "expo-constants";
 
 import { getAccessToken, refreshAccessToken } from "./auth";
+import { getAgentApiUrl } from "./config";
 import { getDeviceId } from "./deviceId";
-import { HARDCODED_ZONE_NAME } from "./identity";
 import { getThreadId, newThreadId, setThreadId } from "./session";
+import { getZoneName } from "./zoneResolution";
 
-export function getAgentApiUrl(): string {
-  const extra = Constants.expoConfig?.extra as { agentApiUrl?: string } | undefined;
-  return extra?.agentApiUrl ?? "http://localhost:8000";
-}
+export { getAgentApiUrl } from "./config";
 
 let agent: HttpAgent | null = null;
 const agentListeners = new Set<() => void>();
@@ -73,9 +70,12 @@ export function switchToConversation(
  */
 export async function buildIdentityHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
-  return token
-    ? { Authorization: `Bearer ${token}`, "X-Zone-Name": HARDCODED_ZONE_NAME }
-    : { "X-Customer-Id": await getDeviceId(), "X-Zone-Name": HARDCODED_ZONE_NAME };
+  const headers: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : { "X-Customer-Id": await getDeviceId() };
+  const zoneName = getZoneName();
+  if (zoneName) headers["X-Zone-Name"] = zoneName;
+  return headers;
 }
 
 /**

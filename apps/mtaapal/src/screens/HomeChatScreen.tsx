@@ -19,10 +19,12 @@ import { CartPanel } from "@/components/CartPanel";
 import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
 import { QuickActionCard } from "@/components/QuickActionCard";
+import { ZoneBanner } from "@/components/ZoneBanner";
 import { ZonePill } from "@/components/ZonePill";
 import { startNewConversation } from "@/lib/agUiClient";
 import { useCart } from "@/lib/useCart";
 import { useMtaaPalChat } from "@/lib/useMtaaPalChat";
+import { useZoneName } from "@/lib/zoneResolution";
 import { colors, radii, spacing, typography } from "@/theme";
 
 const WIDE_SCREEN_BREAKPOINT = 768;
@@ -39,6 +41,7 @@ const quickActions = [
 export function HomeChatScreen() {
   const { messages, sendMessage } = useMtaaPalChat();
   const cart = useCart();
+  const zoneName = useZoneName();
   const [input, setInput] = useState("");
   const { width } = useWindowDimensions();
   const isWideScreen = width >= WIDE_SCREEN_BREAKPOINT;
@@ -83,7 +86,8 @@ export function HomeChatScreen() {
         </Pressable>
       </View>
 
-      <ZonePill label="Kilimani · 5 services available" />
+      {zoneName ? <ZonePill label={zoneName} /> : null}
+      <ZoneBanner />
 
       <View style={styles.body}>
         <KeyboardAvoidingView
