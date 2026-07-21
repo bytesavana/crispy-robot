@@ -9,7 +9,7 @@ export function ChatMessageItem({ message }: { message: ChatMessage }) {
     return <ActivityLine text={message.text} />;
   }
   return message.role === "user" ? (
-    <UserBubble text={message.text} />
+    <UserBubble text={message.text} imageUris={message.imageUris} />
   ) : (
     <AssistantCard text={message.text} />
   );

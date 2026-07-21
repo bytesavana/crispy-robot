@@ -1,6 +1,6 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 import * as Crypto from "expo-crypto";
-import type { AgentSubscriber, Message as AgUiMessage } from "@ag-ui/client";
+import type { AgentSubscriber, Message as AgUiMessage, UserMessage as AgUiUserMessage } from "@ag-ui/client";
 
 import { getAgent, runAgentWithAuth, subscribeAgent } from "./agUiClient";
 
@@ -8,20 +8,49 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "activity";
   text: string;
+  /** Data URIs for any attached images, when the message included at least one. */
+  imageUris?: string[];
   /** Only set for role "activity" — e.g. "arrived", "purchasing", "provider_assigned". */
   activityType?: string;
+};
+
+/** An image attached to an outgoing message, already resized/compressed by the caller. */
+export type OutgoingImage = {
+  base64: string;
+  mimeType: string;
 };
 
 const FRIENDLY_ERROR_MESSAGE = "Something went wrong — please try again.";
 
 function contentToText(content: AgUiMessage["content"]): string {
-  return typeof content === "string" ? content : "";
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  const textPart = content.find((part) => part.type === "text");
+  return textPart && textPart.type === "text" ? textPart.text : "";
+}
+
+function contentToImageUris(content: AgUiMessage["content"]): string[] | undefined {
+  if (typeof content === "string" || !Array.isArray(content)) return undefined;
+  const uris = content
+    .filter((part) => part.type === "image")
+    .map((part) => {
+      const { source } = part;
+      return source.type === "data" ? `data:${source.mimeType};base64,${source.value}` : source.value;
+    });
+  return uris.length > 0 ? uris : undefined;
 }
 
 function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
   return messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user" || message.role === "assistant") {
-      return [{ id: message.id, role: message.role, text: contentToText(message.content) }];
+      return [
+        {
+          id: message.id,
+          role: message.role,
+          text: contentToText(message.content),
+          imageUris: contentToImageUris(message.content),
+        },
+      ];
     }
     // A silent status update from a background fulfillment event (see
     // effective-happiness/didactic-invention) — never part of the model's own turn, so it's
@@ -59,11 +88,23 @@ export function useMtaaPalChat() {
   );
 
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, images?: OutgoingImage[]) => {
       const trimmed = text.trim();
-      if (!trimmed || agent.isRunning) return;
+      const hasImages = images && images.length > 0;
+      if (!trimmed && !hasImages) return;
+      if (agent.isRunning) return;
 
-      agent.addMessage({ id: Crypto.randomUUID(), role: "user", content: trimmed });
+      const content: AgUiUserMessage["content"] = hasImages
+        ? [
+            ...images.map((image) => ({
+              type: "image" as const,
+              source: { type: "data" as const, value: image.base64, mimeType: image.mimeType },
+            })),
+            ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+          ]
+        : trimmed;
+
+      agent.addMessage({ id: Crypto.randomUUID(), role: "user", content });
       setMessages(toDisplayMessages(agent.messages));
       setIsRunning(true);
 

@@ -3,6 +3,7 @@ import { DrawerToggleButton } from "expo-router/drawer";
 import { useState } from "react";
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import {
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AttachMenu } from "@/components/AttachMenu";
 import { CartPanel } from "@/components/CartPanel";
 import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
@@ -22,6 +24,7 @@ import { QuickActionCard } from "@/components/QuickActionCard";
 import { ZoneBanner } from "@/components/ZoneBanner";
 import { ZonePill } from "@/components/ZonePill";
 import { startNewConversation } from "@/lib/agUiClient";
+import { pickChatImageFromCamera, pickChatImagesFromLibrary, type PickedChatImage } from "@/lib/pickChatImage";
 import { useCart } from "@/lib/useCart";
 import { useMtaaPalChat } from "@/lib/useMtaaPalChat";
 import { useZoneName } from "@/lib/zoneResolution";
@@ -43,6 +46,8 @@ export function HomeChatScreen() {
   const cart = useCart();
   const zoneName = useZoneName();
   const [input, setInput] = useState("");
+  const [pendingImages, setPendingImages] = useState<PickedChatImage[]>([]);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const { width } = useWindowDimensions();
   const isWideScreen = width >= WIDE_SCREEN_BREAKPOINT;
 
@@ -61,8 +66,26 @@ export function HomeChatScreen() {
   }));
 
   const submit = (text: string) => {
-    sendMessage(text);
+    if (!text.trim() && pendingImages.length === 0) return;
+    sendMessage(text, pendingImages.length > 0 ? pendingImages : undefined);
     setInput("");
+    setPendingImages([]);
+  };
+
+  const attachFromCamera = async () => {
+    setAttachMenuOpen(false);
+    const images = await pickChatImageFromCamera();
+    if (images.length > 0) setPendingImages((current) => [...current, ...images].slice(0, 4));
+  };
+
+  const attachFromLibrary = async () => {
+    setAttachMenuOpen(false);
+    const images = await pickChatImagesFromLibrary();
+    if (images.length > 0) setPendingImages((current) => [...current, ...images].slice(0, 4));
+  };
+
+  const removePendingImage = (uri: string) => {
+    setPendingImages((current) => current.filter((image) => image.uri !== uri));
   };
 
   return (
@@ -80,6 +103,8 @@ export function HomeChatScreen() {
           onPress={() => {
             startNewConversation();
             setInput("");
+            setPendingImages([]);
+            setAttachMenuOpen(false);
           }}
         >
           <Ionicons name="add" size={22} color={colors.text} />
@@ -123,19 +148,48 @@ export function HomeChatScreen() {
 
             {!isWideScreen && <CartPanel cart={cart} />}
 
-            <View style={styles.composer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Message MtaaPal..."
-                placeholderTextColor={colors.textMuted}
-                value={input}
-                onChangeText={setInput}
-                onSubmitEditing={() => submit(input)}
-                returnKeyType="send"
-              />
-              <Pressable style={styles.sendButton} onPress={() => submit(input)}>
-                <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
-              </Pressable>
+            <View style={styles.composerArea}>
+              {attachMenuOpen ? (
+                <View style={styles.attachMenuOverlay}>
+                  <AttachMenu onCamera={attachFromCamera} onPhoto={attachFromLibrary} />
+                </View>
+              ) : null}
+
+              {pendingImages.length > 0 ? (
+                <View style={styles.previewRow}>
+                  {pendingImages.map((image) => (
+                    <View key={image.uri} style={styles.previewChip}>
+                      <Image source={{ uri: image.uri }} style={styles.previewThumbnail} />
+                      <Pressable
+                        hitSlop={8}
+                        style={styles.previewRemove}
+                        onPress={() => removePendingImage(image.uri)}
+                      >
+                        <Ionicons name="close" size={14} color={colors.textOnPrimary} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              <View style={styles.composer}>
+                <Pressable hitSlop={8} onPress={() => setAttachMenuOpen((open) => !open)}>
+                  <Ionicons name={attachMenuOpen ? "close" : "add"} size={26} color={colors.textMuted} />
+                </Pressable>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Message MtaaPal..."
+                  placeholderTextColor={colors.textMuted}
+                  value={input}
+                  onChangeText={setInput}
+                  onSubmitEditing={() => submit(input)}
+                  onFocus={() => setAttachMenuOpen(false)}
+                  returnKeyType="send"
+                />
+                <Pressable style={styles.sendButton} onPress={() => submit(input)}>
+                  <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
+                </Pressable>
+              </View>
             </View>
           </Animated.View>
         </KeyboardAvoidingView>
@@ -223,12 +277,56 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.xs,
   },
+  composerArea: {
+    position: "relative",
+  },
+  attachMenuOverlay: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: "100%",
+    marginBottom: spacing.sm,
+    zIndex: 10,
+    elevation: 10,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+  },
   composer: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
+  },
+  previewRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  previewChip: {
+    alignSelf: "flex-start",
+  },
+  previewThumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
   },
   input: {
     flex: 1,

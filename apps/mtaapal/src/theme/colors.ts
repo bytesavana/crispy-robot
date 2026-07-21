@@ -7,6 +7,7 @@ export const colors = {
   primaryLight: "#D2703A",
   accentBlue: "#BFE0F2",
   accentPeach: "#F6D3C1",
+  accentGreen: "#C9E4C5",
   text: "#2B2320",
   textMuted: "#8A7A6F",
   textOnPrimary: "#FFFFFF",

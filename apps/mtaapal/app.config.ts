@@ -16,7 +16,14 @@ const config: ExpoConfig = {
     package: "com.mtaapal.app",
     googleServicesFile: "./google-services.json",
   },
-  plugins: ["expo-router", "expo-location", "expo-font", "expo-secure-store", "expo-notifications"],
+  plugins: [
+    "expo-router",
+    "expo-location",
+    "expo-font",
+    "expo-secure-store",
+    "expo-notifications",
+    "expo-image-picker",
+  ],
   extra: {
     agentApiUrl: process.env.EXPO_PUBLIC_AGENT_API_URL ?? "http://localhost:8000",
     identityServerUrl: process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL ?? "http://localhost:5066",
