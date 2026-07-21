@@ -29,7 +29,8 @@ const groups: NavGroup[] = [
     label: 'Catalog',
     items: [
       { to: '/catalog/categories', label: 'Categories', icon: ListTree },
-      { to: '/catalog/zones', label: 'Zone lookup', icon: MapPin },
+      { to: '/catalog/zones', label: 'Zones', icon: MapPin, end: true },
+      { to: '/catalog/zones/lookup', label: 'Zone lookup', icon: Search },
       { to: '/catalog/estimator', label: 'Estimator', icon: Calculator },
     ],
   },

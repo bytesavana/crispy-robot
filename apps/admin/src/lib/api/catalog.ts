@@ -9,6 +9,10 @@ import type {
 
 const base = SERVICE_CATALOG_URL
 
+export function listZones() {
+  return request<ZoneDto[]>(base, '/zones')
+}
+
 export function resolveZone(lat: number, lng: number) {
   return request<ZoneDto>(base, `/zones/resolve?lat=${lat}&lng=${lng}`)
 }
