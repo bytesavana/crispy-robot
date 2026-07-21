@@ -9,10 +9,11 @@ import {
 } from "@expo-google-fonts/playfair-display";
 import * as SplashScreen from "expo-splash-screen";
 import { Stack } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { refreshAccessToken } from "@/lib/auth";
 import { registerForPushNotificationsAsync, setupTaskEventNotificationListeners } from "@/lib/pushNotifications";
 import { colors } from "@/theme";
@@ -25,8 +26,11 @@ export default function RootLayout() {
     PlayfairDisplay_400Regular,
     PlayfairDisplay_600SemiBold,
   });
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 
   useEffect(() => {
+    // Dismiss the static native splash as soon as JS is ready, then hand off to
+    // AnimatedSplash so the logo animation plays over the real app instead of a blank gap.
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
     }
@@ -80,6 +84,9 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+        {showAnimatedSplash && (
+          <AnimatedSplash onFinish={() => setShowAnimatedSplash(false)} />
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -8,6 +8,7 @@ const config: ExpoConfig = {
   version: "1.0.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
+  icon: "./src/assets/branding/icon.png",
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.mtaapal.app",
@@ -15,6 +16,10 @@ const config: ExpoConfig = {
   android: {
     package: "com.mtaapal.app",
     googleServicesFile: "./google-services.json",
+    adaptiveIcon: {
+      foregroundImage: "./src/assets/branding/adaptive-icon.png",
+      backgroundColor: "#1F1F1F",
+    },
   },
   plugins: [
     "expo-router",
