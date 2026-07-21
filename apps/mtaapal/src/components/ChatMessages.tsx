@@ -1,7 +1,7 @@
 import type { ChatMessage } from "@/lib/useMtaaPalChat";
 
 import { ActivityLine } from "./ActivityLine";
-import { AssistantCard } from "./AssistantCard";
+import { AssistantMessage } from "./AssistantMessage";
 import { UserBubble } from "./UserBubble";
 
 export function ChatMessageItem({ message }: { message: ChatMessage }) {
@@ -11,6 +11,6 @@ export function ChatMessageItem({ message }: { message: ChatMessage }) {
   return message.role === "user" ? (
     <UserBubble text={message.text} imageUris={message.imageUris} />
   ) : (
-    <AssistantCard text={message.text} />
+    <AssistantMessage text={message.text} />
   );
 }

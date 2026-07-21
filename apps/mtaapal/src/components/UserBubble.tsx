@@ -29,7 +29,7 @@ export function UserBubble({ text, imageUris }: UserBubbleProps) {
 const styles = StyleSheet.create({
   container: {
     alignSelf: "flex-end",
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accentPeach,
     borderRadius: radii.md,
     borderTopRightRadius: spacing.xs,
     paddingVertical: spacing.sm,
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   },
   text: {
     ...typography.body,
-    color: colors.textOnPrimary,
+    color: colors.text,
   },
   imageGrid: {
     flexDirection: "row",

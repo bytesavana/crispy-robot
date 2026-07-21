@@ -43,14 +43,13 @@ function contentToImageUris(content: AgUiMessage["content"]): string[] | undefin
 function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
   return messages.flatMap((message): ChatMessage[] => {
     if (message.role === "user" || message.role === "assistant") {
-      return [
-        {
-          id: message.id,
-          role: message.role,
-          text: contentToText(message.content),
-          imageUris: contentToImageUris(message.content),
-        },
-      ];
+      const text = contentToText(message.content);
+      const imageUris = contentToImageUris(message.content);
+      // Tool-call-only assistant turns carry no visible content (e.g. the model calling a
+      // backend function produces an empty `content` alongside a `toolCalls` array) — skip
+      // the blank bubble instead of rendering it; the typing indicator already covers the gap.
+      if (!text.trim() && !imageUris) return [];
+      return [{ id: message.id, role: message.role, text, imageUris }];
     }
     // A silent status update from a background fulfillment event (see
     // effective-happiness/didactic-invention) — never part of the model's own turn, so it's

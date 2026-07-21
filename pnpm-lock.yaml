@@ -155,6 +155,9 @@ importers:
       react-native:
         specifier: 0.86.0
         version: 0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
+      react-native-enriched-markdown:
+        specifier: ^0.7.4
+        version: 0.7.4(@expo/config-plugins@57.0.3(typescript@6.0.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       react-native-gesture-handler:
         specifier: ~2.32.0
         version: 2.32.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -4749,6 +4752,19 @@ packages:
       react-native-gesture-handler: '>= 2.0.0'
       react-native-reanimated: '>= 2.0.0'
 
+  react-native-enriched-markdown@0.7.4:
+    resolution: {integrity: sha512-NXkqZL4d5vM6wOBwYwx0r1Xyw2h+E8SyobrS8nKnbpjYOyKZj6zIdOq1KJFrlenJNu/tXpbJ8jtQagaA4Wj4cg==}
+    peerDependencies:
+      '@expo/config-plugins': '>=50.0.0'
+      katex: '>=0.16.0'
+      react: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      '@expo/config-plugins':
+        optional: true
+      katex:
+        optional: true
+
   react-native-gesture-handler@2.32.0:
     resolution: {integrity: sha512-uYIMOKlKENORq2SABE+jIjbPU+h5I/sQKcq2v16zRq848nwEp1fWRVwML4QWqijc8UcXJC25o54S8GQd4Mf2OA==}
     peerDependencies:
@@ -6407,7 +6423,7 @@ snapshots:
       '@expo/config-types': 57.0.1
       '@expo/json-file': 11.0.0
       '@expo/plist': 0.8.0
-      '@expo/require-utils': 57.0.1(typescript@6.0.3)
+      '@expo/require-utils': 57.0.3(typescript@6.0.3)
       '@expo/sdk-runtime-versions': 1.0.0
       chalk: 4.1.2
       debug: 4.4.3
@@ -11179,6 +11195,13 @@ snapshots:
       react-native-gesture-handler: 2.32.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       react-native-reanimated: 4.5.0(react-native-worklets@0.10.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       use-latest-callback: 0.2.6(react@19.2.3)
+
+  react-native-enriched-markdown@0.7.4(@expo/config-plugins@57.0.3(typescript@6.0.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      react-native: 0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
+    optionalDependencies:
+      '@expo/config-plugins': 57.0.3(typescript@6.0.3)
 
   react-native-gesture-handler@2.32.0(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:

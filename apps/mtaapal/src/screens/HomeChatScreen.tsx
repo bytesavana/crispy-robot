@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { DrawerToggleButton } from "expo-router/drawer";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -21,6 +22,7 @@ import { CartPanel } from "@/components/CartPanel";
 import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
 import { QuickActionCard } from "@/components/QuickActionCard";
+import { TypingIndicator } from "@/components/TypingIndicator";
 import { ZoneBanner } from "@/components/ZoneBanner";
 import { ZonePill } from "@/components/ZonePill";
 import { startNewConversation } from "@/lib/agUiClient";
@@ -42,7 +44,7 @@ const quickActions = [
 ];
 
 export function HomeChatScreen() {
-  const { messages, sendMessage } = useMtaaPalChat();
+  const { messages, isRunning, sendMessage } = useMtaaPalChat();
   const cart = useCart();
   const zoneName = useZoneName();
   const [input, setInput] = useState("");
@@ -87,6 +89,10 @@ export function HomeChatScreen() {
   const removePendingImage = (uri: string) => {
     setPendingImages((current) => current.filter((image) => image.uri !== uri));
   };
+
+  // The assistant's message only appears in `messages` once the first streamed token arrives
+  // (see useMtaaPalChat's onTextMessageContentEvent), so this is the gap a typing indicator fills.
+  const showTypingIndicator = isRunning && messages[messages.length - 1]?.role !== "assistant";
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -143,6 +149,7 @@ export function HomeChatScreen() {
                 data={messages}
                 keyExtractor={(message) => message.id}
                 renderItem={({ item }) => <ChatMessageItem message={item} />}
+                ListFooterComponent={showTypingIndicator ? <TypingIndicator /> : null}
               />
             )}
 
@@ -186,8 +193,16 @@ export function HomeChatScreen() {
                   onFocus={() => setAttachMenuOpen(false)}
                   returnKeyType="send"
                 />
-                <Pressable style={styles.sendButton} onPress={() => submit(input)}>
-                  <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
+                <Pressable
+                  style={styles.sendButton}
+                  onPress={() => submit(input)}
+                  disabled={isRunning}
+                >
+                  {isRunning ? (
+                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                  ) : (
+                    <Ionicons name="arrow-up" size={18} color={colors.textOnPrimary} />
+                  )}
                 </Pressable>
               </View>
             </View>
