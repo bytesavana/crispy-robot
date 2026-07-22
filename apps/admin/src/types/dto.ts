@@ -66,6 +66,7 @@ export interface ProviderDto {
   contactChannels: ContactChannelDto[]
   latitude?: number | null
   longitude?: number | null
+  metadata: Record<string, unknown>
   createdAt: string
   updatedAt: string
 }
@@ -76,6 +77,7 @@ export interface CreateProviderRequest {
   contactChannels?: ContactChannelDto[]
   latitude?: number | null
   longitude?: number | null
+  metadata?: Record<string, unknown>
 }
 
 export interface UpdateProviderRequest {
@@ -84,6 +86,7 @@ export interface UpdateProviderRequest {
   contactChannels?: ContactChannelDto[]
   latitude?: number | null
   longitude?: number | null
+  metadata?: Record<string, unknown>
 }
 
 export interface VerifyProviderRequest {
