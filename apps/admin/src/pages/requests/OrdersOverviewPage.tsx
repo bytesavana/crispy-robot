@@ -33,7 +33,6 @@ export function OrdersOverviewPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Agent ref</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Task</TableHead>
               <TableHead>Zone</TableHead>
@@ -49,7 +48,6 @@ export function OrdersOverviewPage() {
                 className="cursor-pointer"
                 onClick={() => navigate(`/requests/${order.requestId}`)}
               >
-                <TableCell className="font-mono text-xs">{order.agentRef}</TableCell>
                 <TableCell>{order.customerName}</TableCell>
                 <TableCell>{order.taskCode}</TableCell>
                 <TableCell>{order.zoneName}</TableCell>
@@ -62,7 +60,7 @@ export function OrdersOverviewPage() {
             ))}
             {orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No orders found.
                 </TableCell>
               </TableRow>

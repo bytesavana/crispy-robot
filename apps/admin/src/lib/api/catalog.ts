@@ -1,5 +1,6 @@
 import { request, SERVICE_CATALOG_URL } from './client'
 import type {
+  CatalogProductSummaryDto,
   EstimateRequest,
   EstimateResponse,
   ServiceCategoryDto,
@@ -41,4 +42,10 @@ export function getCategory(code: string) {
 
 export function estimate(body: EstimateRequest) {
   return request<EstimateResponse>(base, '/estimate', { method: 'POST', body })
+}
+
+/** Omit categoryCode for every curated product across every category. */
+export function listCatalogProducts(categoryCode?: string) {
+  const query = categoryCode ? `?categoryCode=${encodeURIComponent(categoryCode)}` : ''
+  return request<CatalogProductSummaryDto[]>(base, `/catalog-products${query}`)
 }

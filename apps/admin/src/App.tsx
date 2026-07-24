@@ -5,6 +5,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { CategoriesPage } from '@/pages/catalog/CategoriesPage'
 import { CategoryDetailPage } from '@/pages/catalog/CategoryDetailPage'
+import { CatalogProductsPage } from '@/pages/catalog/CatalogProductsPage'
 import { ZonesListPage } from '@/pages/catalog/ZonesListPage'
 import { ZoneDetailPage } from '@/pages/catalog/ZoneDetailPage'
 import { ZoneLookupPage } from '@/pages/catalog/ZoneLookupPage'
@@ -12,6 +13,7 @@ import { EstimatorPage } from '@/pages/catalog/EstimatorPage'
 import { ProvidersListPage } from '@/pages/providers/ProvidersListPage'
 import { NewProviderPage } from '@/pages/providers/NewProviderPage'
 import { ProviderDetailPage } from '@/pages/providers/ProviderDetailPage'
+import { ProviderOfferingsPage } from '@/pages/providers/ProviderOfferingsPage'
 import { RequestLookupPage } from '@/pages/requests/RequestLookupPage'
 import { RequestDetailPage } from '@/pages/requests/RequestDetailPage'
 import { OrdersOverviewPage } from '@/pages/requests/OrdersOverviewPage'
@@ -30,12 +32,14 @@ const router = createBrowserRouter([
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'catalog/categories', element: <CategoriesPage /> },
           { path: 'catalog/categories/:code', element: <CategoryDetailPage /> },
+          { path: 'catalog/products', element: <CatalogProductsPage /> },
           { path: 'catalog/zones', element: <ZonesListPage /> },
           { path: 'catalog/zones/lookup', element: <ZoneLookupPage /> },
           { path: 'catalog/zones/:id', element: <ZoneDetailPage /> },
           { path: 'catalog/estimator', element: <EstimatorPage /> },
           { path: 'providers', element: <ProvidersListPage /> },
           { path: 'providers/new', element: <NewProviderPage /> },
+          { path: 'providers/offerings', element: <ProviderOfferingsPage /> },
           { path: 'providers/:id', element: <ProviderDetailPage /> },
           { path: 'requests/lookup', element: <RequestLookupPage /> },
           { path: 'requests/:id', element: <RequestDetailPage /> },

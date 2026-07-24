@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
-import { AlertCircle, ShieldCheck, Truck, Users, ListTree, Search, PlusCircle } from 'lucide-react'
+import { AlertCircle, ShieldCheck, Truck, Users, ListTree, Search, PlusCircle, Package, Tags } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { IllustrativeTag } from '@/components/Illustrative'
 import { useAsync } from '@/lib/hooks/useAsync'
-import { listProviders } from '@/lib/api/providers'
+import { listProviders, listOfferings } from '@/lib/api/providers'
 import { listConsumers } from '@/lib/api/consumers'
-import { listCategories } from '@/lib/api/catalog'
+import { listCategories, listCatalogProducts } from '@/lib/api/catalog'
 import {
   mockActivityFiller,
   mockAvgTimeToAssignMinutes,
@@ -20,12 +20,14 @@ import {
 } from '@/mocks/dashboardMocks'
 
 async function loadDashboardData() {
-  const [providers, consumers, categories] = await Promise.all([
+  const [providers, consumers, categories, products, offerings] = await Promise.all([
     listProviders(),
     listConsumers(),
     listCategories(),
+    listCatalogProducts(),
+    listOfferings({ limit: 500 }),
   ])
-  return { providers, consumers, categories }
+  return { providers, consumers, categories, products, offerings }
 }
 
 function StatTile({
@@ -61,10 +63,15 @@ export function DashboardPage() {
   const providers = data?.providers ?? []
   const consumers = data?.consumers ?? []
   const categories = data?.categories ?? []
+  const products = data?.products ?? []
+  const offerings = data?.offerings ?? []
 
   const activeProviders = providers.filter((p) => p.isActive).length
+  const vendorCount = providers.filter((p) => p.kind === 'Vendor').length
+  const runnerCount = providers.filter((p) => p.kind === 'Runner').length
   const pendingVerification = providers.filter((p) => p.verificationStatus !== 'Verified').length
   const activeConsumers = consumers.filter((c) => c.isActive).length
+  const availableOfferings = offerings.filter((o) => o.isAvailable).length
 
   const realActivity: MockActivityEntry[] = []
   const latestProvider = [...providers].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
@@ -111,6 +118,7 @@ export function DashboardPage() {
               icon={Truck}
               label="Active providers"
               value={`${activeProviders} / ${providers.length}`}
+              hint={`${vendorCount} vendors, ${runnerCount} runners`}
             />
             <StatTile
               icon={ShieldCheck}
@@ -124,6 +132,27 @@ export function DashboardPage() {
               value={`${activeConsumers} / ${consumers.length}`}
             />
             <StatTile icon={ListTree} label="Live categories" value={String(categories.length)} />
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {loading ? (
+          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+        ) : (
+          <>
+            <StatTile
+              icon={Package}
+              label="Catalog products"
+              value={products.length === 500 ? '500+' : String(products.length)}
+              hint="ServiceCatalog curated allow-list"
+            />
+            <StatTile
+              icon={Tags}
+              label="Provider offerings"
+              value={offerings.length === 500 ? '500+' : String(offerings.length)}
+              hint={`${availableOfferings} currently available`}
+            />
           </>
         )}
       </div>
@@ -199,6 +228,16 @@ export function DashboardPage() {
             <Button variant="outline" size="sm" className="justify-start" asChild>
               <Link to="/requests/lookup">
                 <PlusCircle className="size-4" /> Look up a request
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start" asChild>
+              <Link to="/catalog/products">
+                <Package className="size-4" /> Browse catalog products
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start" asChild>
+              <Link to="/providers/offerings">
+                <Tags className="size-4" /> Browse provider offerings
               </Link>
             </Button>
           </CardContent>

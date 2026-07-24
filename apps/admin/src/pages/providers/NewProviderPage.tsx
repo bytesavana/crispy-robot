@@ -5,15 +5,17 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ContactChannelsEditor } from '@/components/ContactChannelsEditor'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { ApiError } from '@/lib/api/client'
 import { createProvider } from '@/lib/api/providers'
-import type { ContactChannelDto } from '@/types/dto'
+import type { ContactChannelDto, ProviderKind } from '@/types/dto'
 
 export function NewProviderPage() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
+  const [kind, setKind] = useState<ProviderKind>('Vendor')
   const [fulfillmentType, setFulfillmentType] = useState('')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -28,6 +30,7 @@ export function NewProviderPage() {
     try {
       const provider = await createProvider({
         name,
+        kind,
         fulfillmentType,
         contactChannels: channels,
         latitude: latitude ? Number(latitude) : undefined,
@@ -57,6 +60,18 @@ export function NewProviderPage() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="name">Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="kind">Kind</Label>
+              <Select value={kind} onValueChange={(v) => setKind(v as ProviderKind)}>
+                <SelectTrigger id="kind">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Vendor">Vendor — fulfills the service itself</SelectItem>
+                  <SelectItem value="Runner">Runner — platform errand-doer/courier</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="fulfillmentType">Fulfillment type</Label>

@@ -2,10 +2,12 @@ import { PROVIDER_REGISTRY_URL, request } from './client'
 import type {
   AddCoverageRequest,
   AddCoverageResponse,
+  CatalogItemDto,
   CreateProviderRequest,
   MatchedProviderDto,
   ProviderCoverageDto,
   ProviderDto,
+  ProviderKind,
   UpdateProviderRequest,
   VerifyProviderRequest,
 } from '@/types/dto'
@@ -20,9 +22,12 @@ export function getProvider(id: string) {
   return request<ProviderDto>(base, `/providers/${id}`)
 }
 
-export function listProviders(params: { isActive?: boolean } = {}) {
-  const query = params.isActive === undefined ? '' : `?isActive=${params.isActive}`
-  return request<ProviderDto[]>(base, `/providers${query}`)
+export function listProviders(params: { isActive?: boolean; kind?: ProviderKind } = {}) {
+  const query = new URLSearchParams()
+  if (params.isActive !== undefined) query.set('isActive', String(params.isActive))
+  if (params.kind) query.set('kind', params.kind)
+  const qs = query.toString()
+  return request<ProviderDto[]>(base, `/providers${qs ? `?${qs}` : ''}`)
 }
 
 export function updateProvider(id: string, body: UpdateProviderRequest) {
@@ -56,4 +61,14 @@ export function deactivateCoverage(id: string, coverageId: string) {
 export function matchProviders(params: { zoneId: string; categoryCode: string }) {
   const query = new URLSearchParams(params)
   return request<MatchedProviderDto[]>(base, `/providers/match?${query.toString()}`)
+}
+
+/** Browse offerings — omit both filters to list everything (capped server-side at 500). */
+export function listOfferings(params: { categoryCode?: string; providerId?: string; limit?: number } = {}) {
+  const query = new URLSearchParams()
+  if (params.categoryCode) query.set('categoryCode', params.categoryCode)
+  if (params.providerId) query.set('providerId', params.providerId)
+  if (params.limit) query.set('limit', String(params.limit))
+  const qs = query.toString()
+  return request<CatalogItemDto[]>(base, `/providers/items${qs ? `?${qs}` : ''}`)
 }

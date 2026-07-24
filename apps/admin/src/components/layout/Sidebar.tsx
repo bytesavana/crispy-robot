@@ -8,6 +8,8 @@ import {
   ClipboardList,
   Search,
   Users,
+  Package,
+  Tags,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,12 +31,19 @@ const groups: NavGroup[] = [
     label: 'Catalog',
     items: [
       { to: '/catalog/categories', label: 'Categories', icon: ListTree },
+      { to: '/catalog/products', label: 'Products', icon: Package },
       { to: '/catalog/zones', label: 'Zones', icon: MapPin, end: true },
       { to: '/catalog/zones/lookup', label: 'Zone lookup', icon: Search },
       { to: '/catalog/estimator', label: 'Estimator', icon: Calculator },
     ],
   },
-  { label: 'Providers', items: [{ to: '/providers', label: 'All providers', icon: Truck }] },
+  {
+    label: 'Providers',
+    items: [
+      { to: '/providers', label: 'All providers', icon: Truck, end: true },
+      { to: '/providers/offerings', label: 'Offerings', icon: Tags },
+    ],
+  },
   {
     label: 'Orders',
     items: [

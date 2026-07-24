@@ -35,6 +35,15 @@ export interface ServiceOfferingDto {
   baseEtaMinutes: number
 }
 
+export interface CatalogProductSummaryDto {
+  id: string
+  categoryCode: string
+  genericName: string
+  brand?: string | null
+  packSize?: string | null
+  displayName: string
+}
+
 export interface EstimateRequest {
   taskType: string
   zoneId?: string | null
@@ -56,9 +65,12 @@ export interface ContactChannelDto {
 
 export type VerificationStatus = 'Pending' | 'Verified' | 'Rejected'
 
+export type ProviderKind = 'Vendor' | 'Runner'
+
 export interface ProviderDto {
   id: string
   name: string
+  kind: ProviderKind
   fulfillmentType: string
   isActive: boolean
   verificationStatus: string
@@ -69,10 +81,12 @@ export interface ProviderDto {
   metadata: Record<string, unknown>
   createdAt: string
   updatedAt: string
+  coverage: ProviderCoverageDto[]
 }
 
 export interface CreateProviderRequest {
   name: string
+  kind: string
   fulfillmentType: string
   contactChannels?: ContactChannelDto[]
   latitude?: number | null
@@ -82,6 +96,7 @@ export interface CreateProviderRequest {
 
 export interface UpdateProviderRequest {
   name: string
+  kind: string
   fulfillmentType: string
   contactChannels?: ContactChannelDto[]
   latitude?: number | null
@@ -119,7 +134,35 @@ export interface MatchedProviderDto {
   contactChannels: ContactChannelDto[]
 }
 
+/** A single vendor's price/availability for a curated product, hydrated with product fields —
+ * ProviderRegistry's flat "provider offering" shape (its route is still named `providers/items`,
+ * a holdover from before the CatalogItem -> ProviderOffering entity rename). */
+export interface CatalogItemDto {
+  id: string
+  providerId: string
+  providerName: string
+  categoryCode: string
+  genericName: string
+  brand?: string | null
+  packSize?: string | null
+  displayName: string
+  price: number
+  isAvailable: boolean
+}
+
 // ---------- ServiceRequestOrchestrator ----------
+
+export interface ServiceTaskLineItemDto {
+  id: string
+  catalogItemId: string
+  providerId: string
+  itemFamily: string
+  displayName: string
+  brand?: string | null
+  packSize?: string | null
+  quantity: number
+  unitPriceSnapshot: number
+}
 
 export interface ServiceTaskDto {
   id: string
@@ -127,9 +170,12 @@ export interface ServiceTaskDto {
   zoneId: string
   zoneName: string
   fieldValues: Record<string, string>
+  lineItems: ServiceTaskLineItemDto[]
   estimatedPrice: number
   estimatedEtaMinutes: number
   status: string
+  stage: string
+  assignedVendorRef?: string | null
   assignedRunnerRef?: string | null
   createdAt: string
   updatedAt: string
@@ -185,9 +231,25 @@ export interface ServiceTaskUpdateDto {
   occurredAt: string
 }
 
+/** One provider-matching attempt for a task — who it was offered to and what happened
+ * (accepted/rejected/expired), distinct from the task's own status transitions. */
+export interface ProviderOfferDto {
+  id: string
+  providerId: string
+  providerName: string
+  stage: string
+  fulfillmentType: string
+  attemptNumber: number
+  offeredAt: string
+  expiresAt: string
+  status: string
+  respondedAt?: string | null
+}
+
 export interface AdminServiceTaskDto extends ServiceTaskDto {
   statusEvents: ServiceTaskStatusEventDto[]
   updates: ServiceTaskUpdateDto[]
+  offers: ProviderOfferDto[]
 }
 
 export interface AdminServiceRequestDto {
