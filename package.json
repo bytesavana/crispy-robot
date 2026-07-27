@@ -4,6 +4,7 @@
   "packageManager": "pnpm@11.13.0",
   "scripts": {
     "mtaapal": "pnpm --filter mtaapal",
+    "mtaahub": "pnpm --filter mtaahub",
     "admin": "pnpm --filter admin"
   }
 }

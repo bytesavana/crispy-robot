@@ -1,11 +1,17 @@
 # crispy-robot
 
-MtaaPal client apps — a pnpm workspace. Two apps: `apps/mtaapal`, the MtaaPal React Native/Expo
-chat client, and `apps/admin`, the internal ops web console.
+MtaaPal client apps — a pnpm workspace. Three apps:
+
+| App | What it is | Who uses it |
+|---|---|---|
+| `apps/mtaapal` | React Native/Expo chat client | customers |
+| `apps/mtaahub` | React Native/Expo fulfillment client | shops and runners |
+| `apps/admin` | Vite ops web console | the MtaaPal team |
 
 Everything below is run from the repo root using pnpm — either directly via `--filter mtaapal` /
-`--filter admin`, or the shorthand `pnpm mtaapal <command>` / `pnpm admin <command>` (defined in
-the root `package.json`), which is equivalent.
+`--filter mtaahub` / `--filter admin`, or the shorthand `pnpm mtaapal <command>` /
+`pnpm mtaahub <command>` / `pnpm admin <command>` (defined in the root `package.json`), which is
+equivalent.
 
 ## Install dependencies
 
@@ -89,6 +95,58 @@ then restart `pnpm mtaapal start`.
 pnpm mtaapal typecheck
 pnpm mtaapal lint
 ```
+
+## MtaaHub app — "MtaaPal for Business"
+
+`apps/mtaahub` is the other side of a MtaaPal order: the shop or independent runner who takes on a
+job. One Expo app, one shared Calendar / Earnings / Profile experience for both — a provider's
+`businessType` ("Shop or Vendor" vs "Independent Runner") only changes labels and copy, never
+navigation, since both are self-fulfilling providers under the hood (ProviderRegistry's
+`ProviderKind.Vendor`, `FulfillmentType.VendorFulfilled`).
+
+```sh
+pnpm mtaahub start
+pnpm mtaahub android
+pnpm mtaahub ios
+```
+
+It talks to three `effective-happiness` services directly (no agent in the loop):
+ServiceRequestOrchestrator for jobs and offers, ProviderRegistry for sign-in, coverage and
+availability, and ServiceCatalog for category names, plus IdentityServer for the OTP. Copy
+`apps/mtaahub/.env.example` to `apps/mtaahub/.env` to point them somewhere other than the default
+local ports.
+
+**Onboarding is self-service once the phone number has an account.** Signing in needs an
+IdentityServer account for the number — that part is still ops-provisioned, since nothing creates
+one for a non-customer yet (`/account/activate` cascades into creating a Consumer) — but from there,
+a number with no `Provider` record lands in an in-app onboarding flow (role picker → business info)
+that calls `POST /providers` directly, landing as `VerificationStatus.Pending` until ops verifies it.
+Only a wholly unknown phone number gets the "ask ops to set you up" dead end.
+
+**Physical device**: same caveat as MtaaPal, plus one more. `ServiceRequestOrchestrator` and
+`ProviderRegistry` bind to `localhost` in their `launchSettings.json` — unlike IdentityServer, which
+already binds `0.0.0.0` — so a phone on the LAN can't reach them until those are changed too.
+
+### Demo data
+
+To walk the app with no backend running, set `EXPO_PUBLIC_DEMO_DATA=1` in `apps/mtaahub/.env`.
+Offers, the calendar, earnings and job detail then come from in-memory fixtures (`src/lib/demo/`)
+instead of the backend, and no fulfillment or provider-registry request touches the network at all.
+
+It's a real little state machine rather than static lists — accepting an offer moves a job onto the
+calendar as confirmed, starting a job and working through its stops narrates real task updates, and
+reporting a price runs the same tolerance rule the backend uses (5% or KES 50, whichever is kinder),
+so a big enough difference escalates to "waiting on customer". Every screen shows a **Demo data**
+banner while it's on, and the Profile tab grows a "switch to shop view" toggle so one account can
+see both roles, plus a "reset demo data" button.
+
+Sign-in still uses the real IdentityServer — demo mode stubs the fulfillment and provider-registry
+sides only. Delete the line, or set it to `0`, to go back to live data.
+
+**Offers are polled, not pushed.** The offers list and calendar refresh every 15–20s while focused. A
+job offer expires on a timer, so a provider with the app backgrounded hears about one when they next
+open it. Fixing that properly needs provider-keyed push tokens, which the backend doesn't have —
+today's push infra is in `didactic-invention` and keyed by `customer_id`.
 
 ## Admin app
 
