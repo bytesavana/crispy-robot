@@ -8,18 +8,34 @@ import {
   useFonts,
 } from "@expo-google-fonts/playfair-display";
 import * as SplashScreen from "expo-splash-screen";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { refreshAccessToken } from "@/lib/auth";
+import { useIsAddressPickRequested } from "@/lib/locationPickerBridge";
 import { registerForPushNotificationsAsync, setupTaskEventNotificationListeners } from "@/lib/pushNotifications";
 import { colors } from "@/theme";
 import { resolveZone } from "@/lib/zoneResolution";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * Renders nothing — its only job is watching for a location pick request
+ * (from either the agent's ask_customer_for_address tool call or a manual
+ * pickLocation()) and pushing the modal, regardless of which screen is
+ * currently active. Mounted once, at the root, since both trigger paths can
+ * fire from anywhere.
+ */
+function LocationPickerRouter() {
+  const requested = useIsAddressPickRequested();
+  useEffect(() => {
+    if (requested) router.push("/location-modal");
+  }, [requested]);
+  return null;
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -83,7 +99,17 @@ export default function RootLayout() {
               sheetCornerRadius: 24,
             }}
           />
+          <Stack.Screen
+            name="location-modal"
+            options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.6, 0.92],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }}
+          />
         </Stack>
+        <LocationPickerRouter />
         {showAnimatedSplash && (
           <AnimatedSplash onFinish={() => setShowAnimatedSplash(false)} />
         )}

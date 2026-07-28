@@ -4,8 +4,8 @@ import { HttpAgent } from "@ag-ui/client";
 import { getAccessToken, refreshAccessToken } from "./auth";
 import { getAgentApiUrl } from "./config";
 import { getDeviceId } from "./deviceId";
+import { LOCATION_TOOLS } from "./locationTools";
 import { getThreadId, newThreadId, setThreadId } from "./session";
-import { getZoneName } from "./zoneResolution";
 
 export { getAgentApiUrl } from "./config";
 
@@ -67,15 +67,14 @@ export function switchToConversation(
  * Signed-in users send their auth token and nothing else; guests send the persisted
  * per-install device id — never both, so the backend can't confuse a guest for a
  * signed-in user or vice versa. Shared by the agent and the plain conversations fetch.
+ *
+ * No location header any more: a location is set via pending_address in agent
+ * state (see zoneResolution.ts and locationTools.ts), the same request-body path
+ * every source — GPS, the picker, a saved address — now goes through.
  */
 export async function buildIdentityHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
-  const headers: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : { "X-Customer-Id": await getDeviceId() };
-  const zoneName = getZoneName();
-  if (zoneName) headers["X-Zone-Name"] = zoneName;
-  return headers;
+  return token ? { Authorization: `Bearer ${token}` } : { "X-Customer-Id": await getDeviceId() };
 }
 
 /**
@@ -91,12 +90,17 @@ export async function syncAgentHeaders(): Promise<void> {
  * Runs the agent with fresh headers, transparently retrying once after refreshing the access
  * token if the backend rejects it with a 401 (e.g. "Signature has expired"). Guests have no
  * refresh token, so refreshAccessToken() is a no-op for them and the original 401 propagates.
+ *
+ * LOCATION_TOOLS is sent on every run, not just the first — the client resends
+ * its tool declarations on every call (ag_ui_langgraph never persists them), so
+ * omitting it on a later run would silently drop the agent's ability to ask for
+ * a location on that turn.
  */
 export async function runAgentWithAuth(subscriber: AgentSubscriber): Promise<void> {
   const a = getAgent();
   await syncAgentHeaders();
   try {
-    await a.runAgent({}, subscriber);
+    await a.runAgent({ tools: LOCATION_TOOLS }, subscriber);
   } catch (error) {
     if ((error as { status?: number } | undefined)?.status !== 401) throw error;
 
@@ -104,6 +108,6 @@ export async function runAgentWithAuth(subscriber: AgentSubscriber): Promise<voi
     if (!refreshed) throw error;
 
     await syncAgentHeaders();
-    await a.runAgent({}, subscriber);
+    await a.runAgent({ tools: LOCATION_TOOLS }, subscriber);
   }
 }

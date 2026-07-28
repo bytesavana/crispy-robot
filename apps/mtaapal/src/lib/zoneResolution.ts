@@ -1,17 +1,20 @@
 import { useSyncExternalStore } from "react";
 import * as Location from "expo-location";
 
-import { getAgentApiUrl } from "./config";
+import { getAgent } from "./agUiClient";
 
-export type ZoneStatus = "unresolved" | "resolving" | "resolved" | "no_location" | "not_covered";
+/**
+ * Device GPS permission/read status — unrelated to whether the current thread's
+ * location is covered by MtaaPal. That's a thread-state question now (see
+ * useAddress.ts's address/zone), not a device one; LocationBar reads both.
+ */
+export type ZoneStatus = "unresolved" | "resolving" | "resolved" | "no_location";
 
 let zoneStatus: ZoneStatus = "unresolved";
-let zoneName: string | null = null;
 const listeners = new Set<() => void>();
 
-function setState(status: ZoneStatus, name: string | null = null): void {
+function setStatus(status: ZoneStatus): void {
   zoneStatus = status;
-  zoneName = name;
   listeners.forEach((listener) => listener());
 }
 
@@ -28,47 +31,42 @@ export function useZoneStatus(): ZoneStatus {
   return useSyncExternalStore(subscribeZoneStatus, getZoneStatus, getZoneStatus);
 }
 
-/** Used outside React (e.g. building request headers) — null means "no zone known yet". */
-export function getZoneName(): string | null {
-  return zoneName;
-}
-
-export function useZoneName(): string | null {
-  return useSyncExternalStore(subscribeZoneStatus, getZoneName, getZoneName);
-}
-
-async function lookupZone(latitude: number, longitude: number): Promise<void> {
-  const response = await fetch(
-    `${getAgentApiUrl()}/zones/resolve?lat=${latitude}&lng=${longitude}`,
-  );
-  if (!response.ok) {
-    setState("no_location");
-    return;
-  }
-  const body = (await response.json()) as { zone: { zone_id: string; zone_name: string } | null };
-  if (body.zone) {
-    setState("resolved", body.zone.zone_name);
-  } else {
-    setState("not_covered");
-  }
+/**
+ * Seeds pending_address on the agent's local state from a GPS reading, so the
+ * very first run of a new thread already carries a location — the same early-
+ * seed behavior the old X-Zone-Name header gave, without reintroducing a second
+ * door into the location (see agent/state.py's module docstring).
+ *
+ * Only fills a hole: if this thread already has a bound address (a resumed
+ * conversation, or the customer picked one earlier this session), a GPS reading
+ * must never silently move it — per agent/prompts.py rule 1b, that's the
+ * customer's call, made through the picker or by asking in chat, not something
+ * their phone does to them by walking around.
+ */
+function seedPendingAddress(latitude: number, longitude: number): void {
+  const agent = getAgent();
+  const state = agent.state as { address?: unknown } | null | undefined;
+  if (state?.address) return;
+  agent.setState({ ...agent.state, pending_address: { latitude, longitude, source: "gps" } });
 }
 
 /**
- * Non-prompting resolution: only proceeds if location permission was already granted
- * (e.g. a returning user). Safe to call on every app launch.
+ * Non-prompting resolution: only proceeds if location permission was already
+ * granted (e.g. a returning user). Safe to call on every app launch.
  */
 export async function resolveZone(): Promise<void> {
-  setState("resolving");
+  setStatus("resolving");
   try {
     const permission = await Location.getForegroundPermissionsAsync();
     if (!permission.granted) {
-      setState("no_location");
+      setStatus("no_location");
       return;
     }
     const position = await Location.getCurrentPositionAsync();
-    await lookupZone(position.coords.latitude, position.coords.longitude);
+    seedPendingAddress(position.coords.latitude, position.coords.longitude);
+    setStatus("resolved");
   } catch {
-    setState("no_location");
+    setStatus("no_location");
   }
 }
 
@@ -77,16 +75,17 @@ export async function resolveZone(): Promise<void> {
  * (e.g. the onboarding screen's "Allow" button), not silently on mount.
  */
 export async function requestLocationAndResolveZone(): Promise<void> {
-  setState("resolving");
+  setStatus("resolving");
   try {
     const permission = await Location.requestForegroundPermissionsAsync();
     if (!permission.granted) {
-      setState("no_location");
+      setStatus("no_location");
       return;
     }
     const position = await Location.getCurrentPositionAsync();
-    await lookupZone(position.coords.latitude, position.coords.longitude);
+    seedPendingAddress(position.coords.latitude, position.coords.longitude);
+    setStatus("resolved");
   } catch {
-    setState("no_location");
+    setStatus("no_location");
   }
 }

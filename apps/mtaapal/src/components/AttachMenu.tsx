@@ -16,13 +16,14 @@ type AttachOption = {
 type AttachMenuProps = {
   onCamera: () => void;
   onPhoto: () => void;
+  onLocation: () => void;
 };
 
 function announceComingSoon(feature: string) {
   Alert.alert("Coming soon", `${feature} isn't available yet.`);
 }
 
-export function AttachMenu({ onCamera, onPhoto }: AttachMenuProps) {
+export function AttachMenu({ onCamera, onPhoto, onLocation }: AttachMenuProps) {
   const options: AttachOption[] = [
     {
       key: "camera",
@@ -45,11 +46,11 @@ export function AttachMenu({ onCamera, onPhoto }: AttachMenuProps) {
     {
       key: "location",
       label: "Location",
-      description: "Drop a pickup or drop-off pin for your runner.",
+      description: "Set where MtaaPal should book errands for you.",
       icon: "location-outline",
       iconColor: "#3E7D3B",
       backgroundColor: colors.accentGreen,
-      onPress: () => announceComingSoon("Location sharing"),
+      onPress: onLocation,
     },
     {
       key: "voice-note",

@@ -21,15 +21,13 @@ import { AttachMenu } from "@/components/AttachMenu";
 import { CartPanel } from "@/components/CartPanel";
 import { CartSidebar } from "@/components/CartSidebar";
 import { ChatMessageItem } from "@/components/ChatMessages";
+import { LocationBar } from "@/components/LocationBar";
 import { QuickActionCard } from "@/components/QuickActionCard";
 import { TypingIndicator } from "@/components/TypingIndicator";
-import { ZoneBanner } from "@/components/ZoneBanner";
-import { ZonePill } from "@/components/ZonePill";
 import { startNewConversation } from "@/lib/agUiClient";
 import { pickChatImageFromCamera, pickChatImagesFromLibrary, type PickedChatImage } from "@/lib/pickChatImage";
 import { useCart } from "@/lib/useCart";
 import { useMtaaPalChat } from "@/lib/useMtaaPalChat";
-import { useZoneName } from "@/lib/zoneResolution";
 import { colors, radii, spacing, typography } from "@/theme";
 
 const WIDE_SCREEN_BREAKPOINT = 768;
@@ -44,9 +42,8 @@ const quickActions = [
 ];
 
 export function HomeChatScreen() {
-  const { messages, isRunning, sendMessage } = useMtaaPalChat();
+  const { messages, isRunning, sendMessage, pickLocation } = useMtaaPalChat();
   const cart = useCart();
-  const zoneName = useZoneName();
   const [input, setInput] = useState("");
   const [pendingImages, setPendingImages] = useState<PickedChatImage[]>([]);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
@@ -117,8 +114,7 @@ export function HomeChatScreen() {
         </Pressable>
       </View>
 
-      {zoneName ? <ZonePill label={zoneName} /> : null}
-      <ZoneBanner />
+      <LocationBar onPress={pickLocation} />
 
       <View style={styles.body}>
         <KeyboardAvoidingView
@@ -158,7 +154,14 @@ export function HomeChatScreen() {
             <View style={styles.composerArea}>
               {attachMenuOpen ? (
                 <View style={styles.attachMenuOverlay}>
-                  <AttachMenu onCamera={attachFromCamera} onPhoto={attachFromLibrary} />
+                  <AttachMenu
+                    onCamera={attachFromCamera}
+                    onPhoto={attachFromLibrary}
+                    onLocation={() => {
+                      setAttachMenuOpen(false);
+                      pickLocation();
+                    }}
+                  />
                 </View>
               ) : null}
 
