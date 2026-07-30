@@ -21,7 +21,6 @@ function mirrorAddress(state: Record<string, unknown> | undefined): void {
   markAddressConfirmedFromThread(address, Boolean((state as { zone?: unknown } | undefined)?.zone));
 }
 
-/** One HttpAgent instance per app session, bound to the session's thread_id. */
 export function getAgent(): HttpAgent {
   if (!agent) {
     agent = new HttpAgent({
@@ -74,25 +73,11 @@ export async function buildIdentityHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : { "X-Customer-Id": await getDeviceId() };
 }
 
-/**
- * HttpAgent.headers is a mutable property re-read fresh on every request, so this can run
- * right before each runAgent() call instead of only at construction time.
- */
 export async function syncAgentHeaders(): Promise<void> {
   const a = getAgent();
   a.headers = await buildIdentityHeaders();
 }
 
-/**
- * Runs the agent with fresh headers, transparently retrying once after refreshing the access
- * token if the backend rejects it with a 401 (e.g. "Signature has expired"). Guests have no
- * refresh token, so refreshAccessToken() is a no-op for them and the original 401 propagates.
- *
- * LOCATION_TOOLS is sent on every run, not just the first — the client resends
- * its tool declarations on every call (ag_ui_langgraph never persists them), so
- * omitting it on a later run would silently drop the agent's ability to ask for
- * a location on that turn.
- */
 export async function runAgentWithAuth(subscriber: AgentSubscriber): Promise<void> {
   const a = getAgent();
   await syncAgentHeaders();

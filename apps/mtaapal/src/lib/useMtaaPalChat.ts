@@ -16,13 +16,10 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "activity";
   text: string;
-  /** Data URIs for any attached images, when the message included at least one. */
   imageUris?: string[];
-  /** Only set for role "activity" — e.g. "arrived", "purchasing", "provider_assigned". */
   activityType?: string;
 };
 
-/** An image attached to an outgoing message, already resized/compressed by the caller. */
 export type OutgoingImage = {
   base64: string;
   mimeType: string;
@@ -30,14 +27,6 @@ export type OutgoingImage = {
 
 const FRIENDLY_ERROR_MESSAGE = "Something went wrong — please try again.";
 
-// Matches didactic-invention's agent/state.py LOCATION_UPDATE_PREFIX. The agent
-// injects a `[Location update] ...` message into conversation history whenever
-// apply_address_selection resolves a location change — a fact for the model to
-// relay in its own words, never something the customer typed. It runs inline
-// inside a live /agent run, so the message streams to this client like any
-// other; the AG-UI wire schema has no field for additional_kwargs to mark it,
-// so content is the only thing both this filter and the server's own resume-
-// path filter (store/conversations.py's to_ag_ui_messages) can check.
 const LOCATION_UPDATE_PREFIX = "[Location update]";
 
 function contentToText(content: AgUiMessage["content"]): string {
@@ -63,19 +52,10 @@ function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
     if (message.role === "user" || message.role === "assistant") {
       const text = contentToText(message.content);
       const imageUris = contentToImageUris(message.content);
-      // A location update the agent injected for itself, not the customer —
-      // see LOCATION_UPDATE_PREFIX above. Must be checked before the blank-
-      // content skip below, since this message is never blank.
       if (message.role === "user" && text.startsWith(LOCATION_UPDATE_PREFIX)) return [];
-      // Tool-call-only assistant turns carry no visible content (e.g. the model calling a
-      // backend function produces an empty `content` alongside a `toolCalls` array) — skip
-      // the blank bubble instead of rendering it; the typing indicator already covers the gap.
       if (!text.trim() && !imageUris) return [];
       return [{ id: message.id, role: message.role, text, imageUris }];
     }
-    // A silent status update from a background fulfillment event (see
-    // effective-happiness/didactic-invention) — never part of the model's own turn, so it's
-    // rendered as a status line, not a chat bubble.
     if (message.role === "activity") {
       const text = typeof message.content.message === "string" ? message.content.message : "";
       return [{ id: message.id, role: "activity", activityType: message.activityType, text }];
@@ -84,25 +64,6 @@ function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
   });
 }
 
-/**
- * Runs the agent, and — if the model called a client-side location tool — answers
- * it and runs again, repeating until a run produces no client tool call.
- *
- * The server's route_after_agent ends a run the instant the model calls a tool
- * not in its own tool list (see agent/graph.py); there is no server-side
- * resolve_customer_location, so the run stops with the call unanswered rather
- * than erroring. This is the other half: execute it here, push a real
- * ToolMessage with the tool_call_id so the model sees a genuine answer next
- * turn (not `_repair_dangling_tool_calls`'s generic "interrupted" placeholder,
- * which would misdescribe a deliberate client answer as a network failure),
- * and set pending_address via agent.setState so apply_address_selection picks
- * it up on the next run. `runAgentWithAuth` already resends LOCATION_TOOLS on
- * every call, so a second or third round trip works the same as the first.
- *
- * Recursive rather than a while-loop purely for readability — a location
- * exchange is at most a couple of rounds (GPS or picker, then the model's
- * reaction), never unbounded.
- */
 async function runAgentUntilSettled(agent: HttpAgent, subscriber: AgentSubscriber): Promise<void> {
   let sawLocationToolCall = false;
 
@@ -140,15 +101,11 @@ async function runAgentUntilSettled(agent: HttpAgent, subscriber: AgentSubscribe
   }
 }
 
-/** Drives one AG-UI thread directly against @ag-ui/client's HttpAgent — no chat UI framework involved. */
 export function useMtaaPalChat() {
   const agent = useSyncExternalStore(subscribeAgent, getAgent, getAgent);
   const [messages, setMessages] = useState<ChatMessage[]>(() => toDisplayMessages(agent.messages));
   const [isRunning, setIsRunning] = useState(false);
 
-  // Re-sync local state whenever the agent singleton is rebound (new/resumed conversation).
-  // Adjusting state during render (not in an effect) per React's guidance for "reset state
-  // when a value changes" — avoids an extra commit/render pass from a useEffect setState.
   const [syncedAgent, setSyncedAgent] = useState(agent);
   if (agent !== syncedAgent) {
     setSyncedAgent(agent);

@@ -50,16 +50,9 @@ export function HomeChatScreen() {
   const { width } = useWindowDimensions();
   const isWideScreen = width >= WIDE_SCREEN_BREAKPOINT;
 
-  // On Android, RN's core Keyboard module (which KeyboardAvoidingView's "height"/"padding"
-  // behaviors rely on) doesn't track the keyboard reliably once edge-to-edge is enabled —
-  // the window no longer resizes, so KeyboardAvoidingView never sees a size change. Reanimated's
-  // useAnimatedKeyboard reads the real WindowInsets animation instead, so it stays accurate.
   const keyboard = useAnimatedKeyboard();
   const insets = useSafeAreaInsets();
   const androidKeyboardPadding = useAnimatedStyle(() => ({
-    // keyboard.height is measured from the very bottom of the screen, which already overlaps
-    // the bottom safe-area inset (nav bar) that SafeAreaView reserves when the keyboard is
-    // closed. Subtract it so the composer isn't pushed up by that inset twice.
     paddingBottom:
       Platform.OS === "android" ? Math.max(keyboard.height.value - insets.bottom, 0) : 0,
   }));
@@ -87,8 +80,6 @@ export function HomeChatScreen() {
     setPendingImages((current) => current.filter((image) => image.uri !== uri));
   };
 
-  // The assistant's message only appears in `messages` once the first streamed token arrives
-  // (see useMtaaPalChat's onTextMessageContentEvent), so this is the gap a typing indicator fills.
   const showTypingIndicator = isRunning && messages[messages.length - 1]?.role !== "assistant";
 
   return (

@@ -54,7 +54,7 @@ export async function selectAddressAndCheckCoverage(candidate: {
     served = false;
   }
 
-  if (token !== checkToken) return; // superseded by a newer selection while this was in flight
+  if (token !== checkToken) return;
   selected = { ...candidate, coverage: served ? "covered" : "not_covered" };
   emit();
 }
