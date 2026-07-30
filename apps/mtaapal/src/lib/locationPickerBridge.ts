@@ -13,7 +13,7 @@ type Resolver = (value: PickedAddress | "cancelled") => void;
  * Bridges the imperative `ask_customer_for_address` tool call (fired from deep
  * inside useMtaaPalChat's AG-UI subscriber, outside React) to the LocationPicker
  * component (rendered by HomeChatScreen). Same external-store shape as
- * zoneResolution.ts, since this is the same kind of cross-cutting concern: a
+ * deviceLocation.ts, since this is the same kind of cross-cutting concern: a
  * single flag plus a listener set, read via useSyncExternalStore.
  */
 let pendingResolver: Resolver | null = null;

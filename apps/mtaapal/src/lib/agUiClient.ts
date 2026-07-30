@@ -5,12 +5,21 @@ import { getAccessToken, refreshAccessToken } from "./auth";
 import { getAgentApiUrl } from "./config";
 import { getDeviceId } from "./deviceId";
 import { LOCATION_TOOLS } from "./locationTools";
+import { getSelectedAddress, markAddressConfirmedFromThread } from "./selectedAddress";
 import { getThreadId, newThreadId, setThreadId } from "./session";
 
 export { getAgentApiUrl } from "./config";
 
 let agent: HttpAgent | null = null;
 const agentListeners = new Set<() => void>();
+
+function mirrorAddress(state: Record<string, unknown> | undefined): void {
+  const address = (
+    state as { address?: { latitude: number; longitude: number; name?: string; source: string } } | undefined
+  )?.address;
+  if (!address) return;
+  markAddressConfirmedFromThread(address, Boolean((state as { zone?: unknown } | undefined)?.zone));
+}
 
 /** One HttpAgent instance per app session, bound to the session's thread_id. */
 export function getAgent(): HttpAgent {
@@ -19,15 +28,11 @@ export function getAgent(): HttpAgent {
       url: `${getAgentApiUrl()}/agent`,
       threadId: getThreadId(),
     });
+    agent.subscribe({ onStateChanged: ({ state }) => mirrorAddress(state as Record<string, unknown>) });
   }
   return agent;
 }
 
-/**
- * Subscribes to the agent singleton being rebound to a different thread (new or resumed
- * conversation). Pairs with `useSyncExternalStore(subscribeAgent, getAgent, getAgent)` so
- * components re-render with the fresh instance instead of holding a stale reference.
- */
 export function subscribeAgent(listener: () => void): () => void {
   agentListeners.add(listener);
   return () => agentListeners.delete(listener);
@@ -44,16 +49,16 @@ function rebindAgent(
     initialMessages,
     initialState,
   });
+  mirrorAddress(initialState);
+  agent.subscribe({ onStateChanged: ({ state }) => mirrorAddress(state as Record<string, unknown>) });
   agentListeners.forEach((listener) => listener());
 }
 
-/** Starts a brand-new conversation: fresh thread id, empty chat/cart. */
 export function startNewConversation(): void {
-  rebindAgent(newThreadId());
+  const seed = getSelectedAddress();
+  rebindAgent(newThreadId(), undefined, seed ? { pending_address: seed } : undefined);
 }
 
-/** Resumes a past conversation, seeding the chat with its real message history and state
- * (cart, zone, offerings, ...) instead of just the transcript. */
 export function switchToConversation(
   threadId: string,
   messages: Message[],
@@ -63,15 +68,7 @@ export function switchToConversation(
   rebindAgent(threadId, messages, state);
 }
 
-/**
- * Signed-in users send their auth token and nothing else; guests send the persisted
- * per-install device id — never both, so the backend can't confuse a guest for a
- * signed-in user or vice versa. Shared by the agent and the plain conversations fetch.
- *
- * No location header any more: a location is set via pending_address in agent
- * state (see zoneResolution.ts and locationTools.ts), the same request-body path
- * every source — GPS, the picker, a saved address — now goes through.
- */
+
 export async function buildIdentityHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : { "X-Customer-Id": await getDeviceId() };

@@ -4,17 +4,14 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { requestLocationAndResolveZone } from "@/lib/zoneResolution";
+import { resolveDeviceLocation } from "@/lib/deviceLocation";
 import { colors, spacing, typography } from "@/theme";
 
 export function LocationPermissionScreen() {
   const proceed = () => router.replace("/(drawer)");
 
   const requestPermission = async () => {
-    // Don't block navigation on the permission prompt + network round-trip — zone
-    // resolution continues in the background and the home screen's banner/context
-    // pick up the result once it settles (see zoneResolution.ts).
-    requestLocationAndResolveZone().catch(() => {});
+    resolveDeviceLocation(true).catch(() => {});
     proceed();
   };
 

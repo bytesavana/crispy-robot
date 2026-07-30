@@ -159,7 +159,6 @@ export function HomeChatScreen() {
                     onPhoto={attachFromLibrary}
                     onLocation={() => {
                       setAttachMenuOpen(false);
-                      pickLocation();
                     }}
                   />
                 </View>

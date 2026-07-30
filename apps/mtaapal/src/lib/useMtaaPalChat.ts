@@ -10,6 +10,7 @@ import type {
 import { getAgent, runAgentWithAuth, subscribeAgent } from "./agUiClient";
 import { executeLocationTool, isLocationTool } from "./locationTools";
 import { requestAddressPick } from "./locationPickerBridge";
+import { selectAddressAndCheckCoverage } from "./selectedAddress";
 
 export type ChatMessage = {
   id: string;
@@ -211,24 +212,27 @@ export function useMtaaPalChat() {
     [agent, runAndSettle],
   );
 
-  /**
-   * The manual counterpart to the model calling ask_customer_for_address:
-   * opens the picker (LocationBar/AttachMenu's "Location" option), and — if the
-   * customer actually chose something rather than dismissing it — sets
-   * pending_address and runs the agent with no new user message, exactly like
-   * the GPS cold-start seed in zoneResolution.ts. apply_address_selection
-   * applies the same basket/confirmed-order guards either way and the model
-   * narrates the outcome, so this never needs to duplicate that logic.
-   */
+
   const pickLocation = useCallback(() => {
     if (agent.isRunning) return;
+
+    if (messages.length === 0) {
+      void (async () => {
+        const picked = await requestAddressPick();
+        if (picked === "cancelled") return;
+        agent.setState({ ...agent.state, pending_address: picked });
+        await selectAddressAndCheckCoverage(picked);
+      })();
+      return;
+    }
+
     runAndSettle(async (subscriber) => {
       const picked = await requestAddressPick();
       if (picked === "cancelled") return;
       agent.setState({ ...agent.state, pending_address: picked });
       await runAgentUntilSettled(agent, subscriber);
     });
-  }, [agent, runAndSettle]);
+  }, [agent, runAndSettle, messages.length]);
 
   return { messages, isRunning, sendMessage, pickLocation };
 }

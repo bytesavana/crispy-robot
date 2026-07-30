@@ -1,5 +1,3 @@
-// Must be the first import: @ag-ui/client generates run/thread ids via the
-// `uuid` package, which needs crypto.getRandomValues — not built into Hermes.
 import "react-native-get-random-values";
 
 import {
@@ -18,17 +16,10 @@ import { refreshAccessToken } from "@/lib/auth";
 import { useIsAddressPickRequested } from "@/lib/locationPickerBridge";
 import { registerForPushNotificationsAsync, setupTaskEventNotificationListeners } from "@/lib/pushNotifications";
 import { colors } from "@/theme";
-import { resolveZone } from "@/lib/zoneResolution";
+import { resolveDeviceLocation } from "@/lib/deviceLocation";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-/**
- * Renders nothing — its only job is watching for a location pick request
- * (from either the agent's ask_customer_for_address tool call or a manual
- * pickLocation()) and pushing the modal, regardless of which screen is
- * currently active. Mounted once, at the root, since both trigger paths can
- * fire from anywhere.
- */
 function LocationPickerRouter() {
   const requested = useIsAddressPickRequested();
   useEffect(() => {
@@ -45,18 +36,12 @@ export default function RootLayout() {
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 
   useEffect(() => {
-    // Dismiss the static native splash as soon as JS is ready, then hand off to
-    // AnimatedSplash so the logo animation plays over the real app instead of a blank gap.
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
 
   useEffect(() => {
-    // Proactively refresh on launch instead of waiting for the first request to hit a 401 —
-    // the access token is short-lived (15 min), so it's often already stale by the time the
-    // user sends their first message. A no-op for guests: refreshAccessToken() only acts when
-    // a refresh token is stored, and silently signs out if that refresh token has expired.
     refreshAccessToken().catch(() => {});
   }, []);
 
@@ -66,10 +51,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    // Non-prompting: only resolves if permission was already granted in a past
-    // session. Runs every cold start so a returning user's zone reflects wherever
-    // they are now, without re-asking for permission.
-    resolveZone().catch(() => {});
+    resolveDeviceLocation().catch(() => {});
   }, []);
 
   if (!fontsLoaded) {
