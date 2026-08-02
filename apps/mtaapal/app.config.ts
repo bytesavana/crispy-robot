@@ -28,6 +28,8 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-notifications",
     "expo-image-picker",
+    "expo-splash-screen",
+    "expo-status-bar",
   ],
   extra: {
     agentApiUrl: process.env.EXPO_PUBLIC_AGENT_API_URL ?? "http://localhost:8000",

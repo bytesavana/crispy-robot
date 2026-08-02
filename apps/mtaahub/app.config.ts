@@ -23,7 +23,7 @@ const config: ExpoConfig = {
       backgroundColor: "#1F1F1F",
     },
   },
-  plugins: ["expo-router", "expo-font", "expo-secure-store"],
+  plugins: ["expo-router", "expo-font", "expo-secure-store", "expo-splash-screen", "expo-status-bar"],
   extra: {
     // MtaaHub talks to the fulfillment services directly — there's no agent in the loop, because a
     // runner reporting a shelf price isn't having a conversation.
