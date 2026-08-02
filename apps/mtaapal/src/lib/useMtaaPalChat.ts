@@ -14,7 +14,7 @@ import { selectAddressAndCheckCoverage } from "./selectedAddress";
 
 export type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | "activity";
+  role: "user" | "assistant" | "activity" | "location";
   text: string;
   imageUris?: string[];
   activityType?: string;
@@ -27,7 +27,7 @@ export type OutgoingImage = {
 
 const FRIENDLY_ERROR_MESSAGE = "Something went wrong — please try again.";
 
-const LOCATION_UPDATE_PREFIX = "[Location update]";
+const LOCATION_UPDATE_NAME = "location_update";
 
 function contentToText(content: AgUiMessage["content"]): string {
   if (typeof content === "string") return content;
@@ -52,7 +52,10 @@ function toDisplayMessages(messages: readonly AgUiMessage[]): ChatMessage[] {
     if (message.role === "user" || message.role === "assistant") {
       const text = contentToText(message.content);
       const imageUris = contentToImageUris(message.content);
-      if (message.role === "user" && text.startsWith(LOCATION_UPDATE_PREFIX)) return [];
+      if (message.role === "user" && message.name === LOCATION_UPDATE_NAME) {
+        const locationText = text.trim();
+        return locationText ? [{ id: message.id, role: "location", text: locationText }] : [];
+      }
       if (!text.trim() && !imageUris) return [];
       return [{ id: message.id, role: message.role, text, imageUris }];
     }
