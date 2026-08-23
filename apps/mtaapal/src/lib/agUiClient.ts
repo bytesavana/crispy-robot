@@ -18,7 +18,7 @@ function mirrorAddress(state: Record<string, unknown> | undefined): void {
     state as { address?: { latitude: number; longitude: number; name?: string; source: string } } | undefined
   )?.address;
   if (!address) return;
-  markAddressConfirmedFromThread(address, Boolean((state as { zone?: unknown } | undefined)?.zone));
+  markAddressConfirmedFromThread(address, state?.coverage === "covered");
 }
 
 export function getAgent(): HttpAgent {
@@ -27,7 +27,10 @@ export function getAgent(): HttpAgent {
       url: `${getAgentApiUrl()}/agent`,
       threadId: getThreadId(),
     });
-    agent.subscribe({ onStateChanged: ({ state }) => mirrorAddress(state as Record<string, unknown>) });
+    agent.subscribe({ onStateChanged: ({ state }) => {
+      console.log("agent state changed", state);
+      mirrorAddress(state as Record<string, unknown>);
+    } });
   }
   return agent;
 }
