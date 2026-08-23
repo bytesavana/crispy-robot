@@ -10,16 +10,29 @@ import { getThreadId, newThreadId, setThreadId } from "./session";
 
 export { getAgentApiUrl } from "./config";
 
+export type Address = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  source: string;
+};
+
+export type PendingAddress = Address & {
+  
+};
+
+export type ThreadAddress = PendingAddress & {
+  served: boolean;
+};
+
+export type AgentThreadState = {
+  address?: ThreadAddress;
+  pending_address?: PendingAddress;
+};
+
 let agent: HttpAgent | null = null;
 const agentListeners = new Set<() => void>();
 
-function mirrorAddress(state: Record<string, unknown> | undefined): void {
-  const address = (
-    state as { address?: { latitude: number; longitude: number; name?: string; source: string } } | undefined
-  )?.address;
-  if (!address) return;
-  markAddressConfirmedFromThread(address, state?.coverage === "covered");
-}
 
 export function getAgent(): HttpAgent {
   if (!agent) {
@@ -27,10 +40,16 @@ export function getAgent(): HttpAgent {
       url: `${getAgentApiUrl()}/agent`,
       threadId: getThreadId(),
     });
-    agent.subscribe({ onStateChanged: ({ state }) => {
-      console.log("agent state changed", state);
-      mirrorAddress(state as Record<string, unknown>);
-    } });
+    agent.subscribe({
+      onStateChanged: ({ state }) => {
+        console.log("agent state changed", state);
+
+        const address = state?.address;
+        if (address){
+          markAddressConfirmedFromThread(address, address.served);
+        }
+      }
+    });
   }
   return agent;
 }
@@ -43,7 +62,7 @@ export function subscribeAgent(listener: () => void): () => void {
 function rebindAgent(
   threadId: string,
   initialMessages?: Message[],
-  initialState?: Record<string, unknown>,
+  initialState?: AgentThreadState,
 ): void {
   agent = new HttpAgent({
     url: `${getAgentApiUrl()}/agent`,
@@ -51,8 +70,8 @@ function rebindAgent(
     initialMessages,
     initialState,
   });
-  mirrorAddress(initialState);
-  agent.subscribe({ onStateChanged: ({ state }) => mirrorAddress(state as Record<string, unknown>) });
+  mirrorThreadAddress(initialState);
+  agent.subscribe({ onStateChanged: ({ state }) => mirrorThreadAddress(state) });
   agentListeners.forEach((listener) => listener());
 }
 
@@ -64,7 +83,7 @@ export function startNewConversation(): void {
 export function switchToConversation(
   threadId: string,
   messages: Message[],
-  state?: Record<string, unknown>,
+  state?: AgentThreadState,
 ): void {
   setThreadId(threadId);
   rebindAgent(threadId, messages, state);

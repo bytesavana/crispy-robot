@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import * as Location from "expo-location";
 
+import type { AgentThreadState } from "./agUiClient";
 import { getAgent } from "./agUiClient";
 import { selectAddressAndCheckCoverage } from "./selectedAddress";
 
@@ -29,7 +30,7 @@ export function useDeviceLocationStatus(): DeviceLocationStatus {
 
 async function seedPendingAddress(latitude: number, longitude: number): Promise<void> {
   const agent = getAgent();
-  const state = agent.state as { address?: unknown } | null | undefined;
+  const state: AgentThreadState | null | undefined = agent.state;
   if (state?.address) return;
   const candidate = { latitude, longitude, source: "gps" as const };
   agent.setState({ ...agent.state, pending_address: candidate });

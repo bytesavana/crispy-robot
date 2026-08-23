@@ -10,7 +10,6 @@ import { colors, radii, spacing, typography } from "@/theme";
 export function LocationBar({ onPress }: { onPress: () => void }) {
   const selected = useSelectedAddress();
   const locationStatus = useDeviceLocationStatus();
-  console.log(selected, locationStatus);
   if (selected) {
     if (selected.coverage === "checking") {
       return (

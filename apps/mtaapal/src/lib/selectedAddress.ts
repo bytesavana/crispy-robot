@@ -1,14 +1,11 @@
 import { useSyncExternalStore } from "react";
 
+import type { Address } from "./agUiClient";
 import { getAgentApiUrl } from "./config";
 
 export type CoverageStatus = "checking" | "covered" | "not_covered";
 
-export type SelectedAddress = {
-  latitude: number;
-  longitude: number;
-  name?: string;
-  source: string;
+export type SelectedAddress = Address & {
   coverage: CoverageStatus;
 };
 
@@ -33,12 +30,7 @@ export function useSelectedAddress(): SelectedAddress | null {
   return useSyncExternalStore(subscribeSelectedAddress, getSelectedAddress, getSelectedAddress);
 }
 
-export async function selectAddressAndCheckCoverage(candidate: {
-  latitude: number;
-  longitude: number;
-  name?: string;
-  source: string;
-}): Promise<void> {
+export async function selectAddressAndCheckCoverage(candidate: Address): Promise<void> {
   const token = ++checkToken;
   selected = { ...candidate, coverage: "checking" };
   emit();
@@ -60,10 +52,7 @@ export async function selectAddressAndCheckCoverage(candidate: {
 }
 
 
-export function markAddressConfirmedFromThread(
-  address: { latitude: number; longitude: number; name?: string; source: string },
-  covered: boolean,
-): void {
+export function markAddressConfirmedFromThread(address: Address, covered: boolean): void {
   checkToken++;
   selected = { ...address, coverage: covered ? "covered" : "not_covered" };
   emit();
