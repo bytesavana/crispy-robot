@@ -9,6 +9,7 @@ import { TextField } from "@/components/TextField";
 import { listCategories } from "@/lib/api/catalog";
 import { createProvider } from "@/lib/api/providers";
 import type { BusinessType, CatalogCategory } from "@/lib/api/types";
+import { getAccountInfo } from "@/lib/auth";
 import { cacheProviderSession } from "@/lib/providerSession";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -38,11 +39,17 @@ export function BusinessInfoScreen() {
     setError(undefined);
     setIsSubmitting(true);
     try {
+      const account = await getAccountInfo();
+      if (!account) {
+        throw new Error("Your session expired — sign in again.");
+      }
+
       const provider = await createProvider({
         name: name.trim(),
         kind: "Vendor",
         businessType,
         phone,
+        userId: account.id,
       });
       await cacheProviderSession(provider, phone);
       router.replace("/(app)/calendar");

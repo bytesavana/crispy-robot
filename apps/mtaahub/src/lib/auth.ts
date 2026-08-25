@@ -34,7 +34,7 @@ export class NotOnboardedError extends AuthError {}
 
 type TokenResponse = { access_token: string; refresh_token: string; expires_in: number };
 
-export type AccountInfo = { fullName: string; phone: string; email?: string };
+export type AccountInfo = { id: string; fullName: string; phone: string; email?: string };
 
 const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -141,12 +141,13 @@ export async function getAccountInfo(): Promise<AccountInfo | null> {
   if (!token) return null;
 
   const claims = decodeTokenClaims(token);
+  const id = typeof claims?.sub === "string" ? claims.sub : undefined;
   const fullName = typeof claims?.full_name === "string" ? claims.full_name : undefined;
   const phone = typeof claims?.phone === "string" ? claims.phone : undefined;
   const email = typeof claims?.email === "string" ? claims.email : undefined;
-  if (!fullName || !phone) return null;
+  if (!id || !fullName || !phone) return null;
 
-  return { fullName, phone, email };
+  return { id, fullName, phone, email };
 }
 
 async function storeTokens(tokens: TokenResponse): Promise<void> {

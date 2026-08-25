@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 
-import { findProviderByPhone } from "./api/providers";
+import { findProviderByUserId } from "./api/providers";
 import type { BusinessType, Provider, ProviderKind } from "./api/types";
 import { getAccountInfo, signOut as clearTokens } from "./auth";
 
@@ -66,9 +66,9 @@ function toSession(provider: Provider, phone: string): ProviderSession {
 }
 
 /**
- * Resolves the signed-in phone number to a provider, caching the result. The cache is a
- * launch-speed thing, not a source of truth — it's refreshed from the registry on every resolve, so
- * a runner deactivated overnight finds out on their next cold start rather than never.
+ * Resolves the signed-in user to their provider, caching the result. The cache is a launch-speed
+ * thing, not a source of truth — it's refreshed from the registry on every resolve, so a runner
+ * deactivated overnight finds out on their next cold start rather than never.
  */
 export async function resolveProviderSession(): Promise<SessionState> {
   const account = await getAccountInfo();
@@ -78,7 +78,7 @@ export async function resolveProviderSession(): Promise<SessionState> {
   }
 
   try {
-    const provider = await findProviderByPhone(account.phone);
+    const provider = await findProviderByUserId(account.id);
     if (!provider) {
       await AsyncStorage.removeItem(SESSION_KEY);
       return { status: "needsOnboarding", phone: account.phone };

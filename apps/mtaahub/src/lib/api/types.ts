@@ -104,6 +104,7 @@ export interface ProviderCoverage {
 export interface Provider {
   id: string;
   name: string;
+  userId: string | null;
   kind: ProviderKind;
   fulfillmentType: "VendorFulfilled" | "RunnerFulfilled";
   isActive: boolean;
