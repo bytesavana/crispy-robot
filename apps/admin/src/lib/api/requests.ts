@@ -67,9 +67,9 @@ export function failTask(body: TaskReasonRequest, customerId: string) {
 }
 
 export function acceptOffer(body: AcceptProviderOfferRequest) {
-  return request<void>(base, '/requests/tasks/offers/accept', { method: 'POST', body })
+  return request<void>(base, '/vendor/offers/accept', { method: 'POST', body })
 }
 
 export function rejectOffer(body: RejectProviderOfferRequest) {
-  return request<void>(base, '/requests/tasks/offers/reject', { method: 'POST', body })
+  return request<void>(base, '/vendor/offers/reject', { method: 'POST', body })
 }

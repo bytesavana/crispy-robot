@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { findProviderByUserId } from "./api/providers";
 import type { BusinessType, Provider, ProviderKind } from "./api/types";
 import { getAccountInfo, signOut as clearTokens } from "./auth";
+import { getProviderId } from "./config";
 
 const SESSION_KEY = "mtaahub.providerSession";
 
@@ -70,7 +71,29 @@ function toSession(provider: Provider, phone: string): ProviderSession {
  * thing, not a source of truth — it's refreshed from the registry on every resolve, so a runner
  * deactivated overnight finds out on their next cold start rather than never.
  */
+/** A dev session synthesised from EXPO_PUBLIC_PROVIDER_ID — no sign-in, no registry lookup. The id
+ * matches the orchestrator's seeded fixtures (effective-happiness DevDataSeeder). */
+function devSession(providerId: string): ProviderSession {
+  return {
+    providerId,
+    name: "Faith W. (dev)",
+    kind: "Vendor",
+    businessType: "runner",
+    isActive: true,
+    verificationStatus: "Verified",
+    phone: "",
+    primaryZoneName: "Lifestyle Heights, Tatu City",
+  };
+}
+
 export async function resolveProviderSession(): Promise<SessionState> {
+  const devProviderId = getProviderId();
+  if (devProviderId) {
+    const session = devSession(devProviderId);
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { status: "ready", session };
+  }
+
   const account = await getAccountInfo();
   if (!account) {
     await AsyncStorage.removeItem(SESSION_KEY);

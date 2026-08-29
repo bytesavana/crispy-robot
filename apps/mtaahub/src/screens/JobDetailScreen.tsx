@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -13,119 +14,115 @@ import { acceptTaskOffer, completeTask, getTask, markTaskUnfulfillable, recordTa
 import { formatKes, formatTime } from "@/lib/format";
 import { fromTask, jobMidStageLabel, jobStatusLabel, jobStatusTone } from "@/lib/jobs";
 import { clearJobStage, getJobStage, setJobStage, type JobStage } from "@/lib/jobProgress";
-import { getDemoCustomerName, isDemoEnabled } from "@/lib/demo/demoStore";
 import { useProviderSession } from "@/lib/providerSession";
-import { usePolling } from "@/lib/usePolling";
+import { queryKeys } from "@/lib/queryKeys";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export function JobDetailScreen() {
   const { taskId, offerId } = useLocalSearchParams<{ taskId: string; offerId?: string }>();
   const session = useProviderSession();
+  const queryClient = useQueryClient();
 
-  const fetcher = useCallback(() => getTask(taskId), [taskId]);
-  const { data: task, error, isRefreshing, refresh } = usePolling(fetcher, 15_000);
+  const { data: task, error, isLoading, isFetching, refetch } = useQuery({
+    queryKey: queryKeys.task(taskId),
+    queryFn: () => getTask(taskId),
+    refetchInterval: 15_000,
+  });
+  const errorMessage = error instanceof Error ? error.message : null;
 
   const [stage, setStage] = useState<JobStage | null>(null);
   useEffect(() => {
     getJobStage(taskId).then(setStage).catch(() => setStage(null));
   }, [taskId]);
 
-  const [isBusy, setIsBusy] = useState(false);
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.task(taskId) });
+    queryClient.invalidateQueries({ queryKey: ["jobs"] });
+  }, [queryClient, taskId]);
 
-  if (!task) {
-    return <Screen title="Job">{error ? <ErrorNotice message={error} onRetry={refresh} /> : null}</Screen>;
-  }
+  const acceptMutation = useMutation({
+    mutationFn: () => acceptTaskOffer(taskId, offerId!),
+    onSuccess: invalidate,
+    onError: (caught) => Alert.alert("Couldn't accept", caught instanceof Error ? caught.message : "Try again."),
+  });
 
-  const job = fromTask(task, (stage ?? 0) > 0, offerId ?? null);
-  const businessType = session?.businessType ?? "shop";
-  const customerName = isDemoEnabled() ? getDemoCustomerName(taskId) : null;
-  const note = task.lineItems[0]?.displayName;
-
-  async function accept() {
-    if (!offerId) return;
-    setIsBusy(true);
-    try {
-      await acceptTaskOffer(taskId, offerId);
-      refresh();
-    } catch (caught) {
-      Alert.alert("Couldn't accept", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  function confirmDecline() {
-    Alert.alert("Decline this job?", "We'll look for someone else, or tell the customer.", [
-      { text: "Keep it", style: "cancel" },
-      { text: "Decline", style: "destructive", onPress: () => void decline() },
-    ]);
-  }
-
-  async function decline() {
-    if (!offerId) return;
-    setIsBusy(true);
-    try {
-      await rejectTaskOffer(taskId, offerId, "Declined");
+  const declineMutation = useMutation({
+    mutationFn: () => rejectTaskOffer(taskId, offerId!, "Declined"),
+    onSuccess: () => {
+      invalidate();
       router.back();
-    } catch (caught) {
-      Alert.alert("Couldn't decline", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsBusy(false);
-    }
-  }
+    },
+    onError: (caught) => Alert.alert("Couldn't decline", caught instanceof Error ? caught.message : "Try again."),
+  });
 
-  async function start() {
-    setIsBusy(true);
-    try {
+  const startMutation = useMutation({
+    mutationFn: async () => {
       await startTask(taskId);
       await setJobStage(taskId, 0);
+    },
+    onSuccess: () => {
       setStage(0);
-      refresh();
-    } catch (caught) {
-      Alert.alert("Couldn't start", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsBusy(false);
-    }
-  }
+      invalidate();
+    },
+    onError: (caught) => Alert.alert("Couldn't start", caught instanceof Error ? caught.message : "Try again."),
+  });
 
-  async function advanceStage(current: JobStage, label: string) {
-    setIsBusy(true);
-    try {
+  const stageMutation = useMutation({
+    mutationFn: async ({ current, label }: { current: JobStage; label: string }): Promise<JobStage | null> => {
       if (current === 2) {
         await completeTask(taskId);
         await clearJobStage(taskId);
-        setStage(null);
-        refresh();
-        return;
+        return null;
       }
       await recordTaskUpdate(taskId, "job_stage", `${label} — done.`);
       const next = (current + 1) as JobStage;
       await setJobStage(taskId, next);
+      return next;
+    },
+    onSuccess: (next) => {
       setStage(next);
-    } catch (caught) {
-      Alert.alert("Couldn't update", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsBusy(false);
-    }
+      if (next === null) invalidate();
+    },
+    onError: (caught) => Alert.alert("Couldn't update", caught instanceof Error ? caught.message : "Try again."),
+  });
+
+  const cantDoMutation = useMutation({
+    mutationFn: () => markTaskUnfulfillable(taskId, "Can't fulfil this job"),
+    onSuccess: () => {
+      invalidate();
+      router.back();
+    },
+    onError: (caught) => Alert.alert("Couldn't do that", caught instanceof Error ? caught.message : "Try again."),
+  });
+
+  const isBusy =
+    acceptMutation.isPending ||
+    declineMutation.isPending ||
+    startMutation.isPending ||
+    stageMutation.isPending ||
+    cantDoMutation.isPending;
+
+  if (!task) {
+    return <Screen title="Job">{errorMessage ? <ErrorNotice message={errorMessage} onRetry={refetch} /> : null}</Screen>;
+  }
+
+  const job = fromTask(task, (stage ?? 0) > 0, offerId ?? null);
+  const businessType = session?.businessType ?? "shop";
+  const customerName = job.customerName;
+  const note = task.fieldValues?.job_note ?? task.lineItems[0]?.displayName;
+
+  function confirmDecline() {
+    Alert.alert("Decline this job?", "We'll look for someone else, or tell the customer.", [
+      { text: "Keep it", style: "cancel" },
+      { text: "Decline", style: "destructive", onPress: () => declineMutation.mutate() },
+    ]);
   }
 
   function confirmCantDo() {
     Alert.alert("Can't do this job?", "The customer will be told.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Can't do it", style: "destructive", onPress: () => void cantDo() },
+      { text: "Can't do it", style: "destructive", onPress: () => cantDoMutation.mutate() },
     ]);
-  }
-
-  async function cantDo() {
-    setIsBusy(true);
-    try {
-      await markTaskUnfulfillable(taskId, "Can't fulfil this job");
-      router.back();
-    } catch (caught) {
-      Alert.alert("Couldn't do that", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsBusy(false);
-    }
   }
 
   const stops = [
@@ -141,11 +138,13 @@ export function JobDetailScreen() {
       subtitle={task.zoneName}
       action={<StatusBadge label={jobStatusLabel(job.status, businessType)} tone={jobStatusTone(job.status)} />}
     >
-      {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
+      {errorMessage ? <ErrorNotice message={errorMessage} onRetry={refetch} /> : null}
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={isFetching && !isLoading} onRefresh={refetch} tintColor={colors.primary} />
+        }
       >
         <View style={styles.infoCard}>
           {customerName ? (
@@ -184,7 +183,14 @@ export function JobDetailScreen() {
             ) : null}
             <View style={styles.actions}>
               <OutlineButton label="Decline" onPress={confirmDecline} disabled={isBusy} style={styles.actionButton} />
-              <PrimaryButton label="Accept" onPress={() => void accept()} isBusy={isBusy} style={styles.actionButton} />
+              <PrimaryButton
+                label="Accept"
+                onPress={() => {
+                  if (offerId) acceptMutation.mutate();
+                }}
+                isBusy={isBusy}
+                style={styles.actionButton}
+              />
             </View>
             <Pressable
               accessibilityRole="button"
@@ -198,7 +204,7 @@ export function JobDetailScreen() {
 
         {job.status === "confirmed" ? (
           <View style={styles.actions}>
-            <PrimaryButton label="Start errand" tone="action" onPress={() => void start()} isBusy={isBusy} />
+            <PrimaryButton label="Start errand" tone="action" onPress={() => startMutation.mutate()} isBusy={isBusy} />
             <OutlineButton label="Can't do this job" tone="danger" disabled={isBusy} onPress={confirmCantDo} />
           </View>
         ) : null}
@@ -225,7 +231,7 @@ export function JobDetailScreen() {
                       label={stop.actionLabel}
                       tone="action"
                       isBusy={isBusy}
-                      onPress={() => void advanceStage(index as JobStage, stop.label)}
+                      onPress={() => stageMutation.mutate({ current: index as JobStage, label: stop.label })}
                       style={styles.stopAction}
                     />
                   ) : null}

@@ -31,10 +31,12 @@ const config: ExpoConfig = {
     providerRegistryUrl: process.env.EXPO_PUBLIC_PROVIDER_REGISTRY_URL ?? "http://localhost:5064",
     serviceCatalogUrl: process.env.EXPO_PUBLIC_SERVICE_CATALOG_URL ?? "http://localhost:5062",
     identityServerUrl: process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL ?? "http://localhost:5066",
-    // Serves the whole fulfillment side from in-memory fixtures instead of the network, so the app
-    // can be walked with no backend running. Off unless explicitly asked for, and the UI says so on
-    // every screen while it's on — see src/lib/demo/.
+    // Serves the provider-registry/catalog reads from in-memory fixtures instead of the network. Off
+    // unless explicitly asked for, and the UI says so on every screen while it's on — see src/lib/demo/.
     demoData: process.env.EXPO_PUBLIC_DEMO_DATA === "1" || process.env.EXPO_PUBLIC_DEMO_DATA === "true",
+    // A fixed provider id to run as, skipping sign-in and the registry lookup — for local dev against
+    // the orchestrator's seeded fixtures (effective-happiness DevDataSeeder).
+    providerId: process.env.EXPO_PUBLIC_PROVIDER_ID,
   },
 };
 

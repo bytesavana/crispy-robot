@@ -6,6 +6,7 @@ type Extra = {
   serviceCatalogUrl?: string;
   identityServerUrl?: string;
   demoData?: boolean | string;
+  providerId?: string;
 };
 
 function extra(): Extra {
@@ -44,7 +45,16 @@ export function getIdentityServerUrl(): string {
   return resolve(process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL, extra().identityServerUrl, "http://localhost:5066");
 }
 
-/** Serves the fulfillment side from in-memory fixtures instead of the network. Off unless asked for. */
+/**
+ * A fixed provider id to run as, skipping the IdentityServer sign-in and ProviderRegistry lookup.
+ * For local development against the orchestrator's seeded fixtures — see effective-happiness's
+ * DevDataSeeder, which stamps its jobs with this same id. Empty when a real session is expected.
+ */
+export function getProviderId(): string | undefined {
+  return process.env.EXPO_PUBLIC_PROVIDER_ID || extra().providerId || undefined;
+}
+
+/** Serves the provider-registry/catalog reads from in-memory fixtures. Off unless asked for. */
 export function isDemoEnabled(): boolean {
   const fromEnv = process.env.EXPO_PUBLIC_DEMO_DATA;
   if (fromEnv !== undefined) return fromEnv === "1" || fromEnv === "true";
