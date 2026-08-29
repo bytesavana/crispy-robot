@@ -65,6 +65,8 @@ export interface ContactChannelDto {
 
 export type VerificationStatus = 'Pending' | 'Verified' | 'Rejected'
 
+export type CoverageStatus = 'Pending' | 'Approved' | 'Rejected'
+
 export type ProviderKind = 'Vendor' | 'Runner'
 
 export interface ProviderDto {
@@ -75,6 +77,9 @@ export interface ProviderDto {
   isActive: boolean
   verificationStatus: string
   verifiedAt?: string | null
+  verificationReviewedAt?: string | null
+  verificationReviewedBy?: string | null
+  verificationNote?: string | null
   contactChannels: ContactChannelDto[]
   latitude?: number | null
   longitude?: number | null
@@ -92,6 +97,7 @@ export interface CreateProviderRequest {
   latitude?: number | null
   longitude?: number | null
   metadata?: Record<string, unknown>
+  coverage?: AddCoverageRequest[]
 }
 
 export interface UpdateProviderRequest {
@@ -106,6 +112,7 @@ export interface UpdateProviderRequest {
 
 export interface VerifyProviderRequest {
   status: string
+  reason?: string | null
 }
 
 export interface ProviderCoverageDto {
@@ -114,12 +121,21 @@ export interface ProviderCoverageDto {
   zoneName: string
   categoryCode: string
   isActive: boolean
+  status: CoverageStatus
+  requestedAt: string
+  reviewedAt?: string | null
+  reviewedBy?: string | null
+  reviewNote?: string | null
 }
 
 export interface AddCoverageRequest {
   zoneId?: string | null
   zoneName?: string | null
   categoryCode: string
+}
+
+export interface RejectCoverageRequest {
+  reason?: string | null
 }
 
 export interface AddCoverageResponse {

@@ -6,21 +6,24 @@ type AvailabilityToggleProps = {
   isActive: boolean;
   onChange: (value: boolean) => void;
   isBusy?: boolean;
+  disabled?: boolean;
 };
 
 /** Provider.IsActive, shown as "Available" — an operational toggle a shop or runner flips
  * themselves, independent of verification (see Provider.IsActive's own doc: a verified provider can
- * still be on leave). */
-export function AvailabilityToggle({ isActive, onChange, isBusy }: AvailabilityToggleProps) {
+ * still be on leave). Disabled until the provider is verified — there's nothing to be available for
+ * yet. */
+export function AvailabilityToggle({ isActive, onChange, isBusy, disabled }: AvailabilityToggleProps) {
+  const shown = disabled ? false : isActive;
   return (
-    <View style={styles.row}>
-      <Text style={[styles.label, isActive ? styles.labelActive : styles.labelInactive]}>
-        {isActive ? "Available" : "Away"}
+    <View style={[styles.row, disabled && styles.rowDisabled]}>
+      <Text style={[styles.label, shown ? styles.labelActive : styles.labelInactive]}>
+        {disabled ? "Not live" : shown ? "Available" : "Away"}
       </Text>
       <Switch
-        value={isActive}
+        value={shown}
         onValueChange={onChange}
-        disabled={isBusy}
+        disabled={isBusy || disabled}
         trackColor={{ false: colors.border, true: colors.success }}
         thumbColor={colors.surface}
       />
@@ -38,6 +41,9 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
     paddingRight: spacing.xs,
     paddingVertical: spacing.xs,
+  },
+  rowDisabled: {
+    opacity: 0.5,
   },
   label: {
     ...typography.bodySmall,

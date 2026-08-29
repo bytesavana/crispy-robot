@@ -7,8 +7,9 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   // generic active/inactive
   active: 'default',
   inactive: 'outline',
-  // provider verification
+  // provider verification / coverage review
   verified: 'default',
+  approved: 'default',
   pending: 'outline',
   rejected: 'destructive',
   // task/request lifecycle

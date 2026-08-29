@@ -25,11 +25,8 @@ const SCOPE = "mtaapal.fulfillment offline_access";
 
 export class AuthError extends Error {}
 
-/**
- * Thrown when the number has no account at all. MtaaHub deliberately has no registration path —
- * providers are onboarded by ops, so this routes to "ask ops to set you up" rather than to a
- * sign-up form. That's the one real difference from MtaaPal's otherwise identical auth flow.
- */
+/** Thrown when the number has no account at all — routes to the self-service "create your provider
+ * account" flow (register → activate), the one path that reaches IdentityServer without ops. */
 export class NotOnboardedError extends AuthError {}
 
 type TokenResponse = { access_token: string; refresh_token: string; expires_in: number };
@@ -103,6 +100,38 @@ export async function requestOtp(identifier: string): Promise<void> {
 
 export async function verifyLogin(identifier: string, code: string): Promise<void> {
   const tokens = await postToken({ grant_type: "otp", client_id: CLIENT_ID, identifier, code, scope: SCOPE });
+  await storeTokens(tokens);
+}
+
+/** Self-service provider registration. Creates a provider-intent IdentityServer account (no linked
+ * Consumer) and sends an activation code. The next step is activateAndSignIn. */
+export async function registerProvider(fullName: string, phone: string): Promise<void> {
+  const response = await fetch(`${getIdentityServerUrl()}/account/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fullName, phone, intent: "provider" }),
+  });
+  if (response.status === 409) {
+    throw new AuthError("That number already has an account — go back and sign in.");
+  }
+  if (!response.ok) {
+    throw new AuthError("Couldn't start registration — try again.");
+  }
+}
+
+/** Verifies the activation code, then exchanges the login code IdentityServer returns for tokens —
+ * so the person lands signed in, ready for onboarding, without re-entering anything. */
+export async function activateAndSignIn(phone: string, code: string): Promise<void> {
+  const response = await fetch(`${getIdentityServerUrl()}/account/activate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier: phone, code }),
+  });
+  if (!response.ok) {
+    throw new AuthError("Invalid or expired code");
+  }
+  const { loginCode } = (await response.json()) as { identifier: string; loginCode: string };
+  const tokens = await postToken({ grant_type: "otp", client_id: CLIENT_ID, identifier: phone, code: loginCode, scope: SCOPE });
   await storeTokens(tokens);
 }
 

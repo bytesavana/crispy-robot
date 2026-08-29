@@ -10,7 +10,7 @@ import { ServiceChip } from "@/components/ServiceChip";
 import { TextField } from "@/components/TextField";
 import { listCategories } from "@/lib/api/catalog";
 import { addCoverage, deactivateCoverage, listCoverage } from "@/lib/api/providers";
-import type { ProviderCoverage } from "@/lib/api/types";
+import type { CoverageStatus, ProviderCoverage } from "@/lib/api/types";
 import { useProviderSession } from "@/lib/providerSession";
 import { queryKeys } from "@/lib/queryKeys";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -104,7 +104,10 @@ export function CoverageScreen() {
             <Text style={styles.zoneTitle}>{zoneName}</Text>
             {zoneRows.map((row) => (
               <View key={row.id} style={styles.serviceRow}>
-                <Text style={styles.serviceLabel}>{categoryName(row.categoryCode)}</Text>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceLabel}>{categoryName(row.categoryCode)}</Text>
+                  <CoverageStatusPill status={row.status} note={row.reviewNote} />
+                </View>
                 <Switch
                   value={row.isActive}
                   onValueChange={(nextValue) => toggleMutation.mutate({ row, nextValue })}
@@ -142,6 +145,25 @@ export function CoverageScreen() {
   );
 }
 
+const STATUS_LABEL: Record<CoverageStatus, string> = {
+  Pending: "Pending review",
+  Approved: "Approved",
+  Rejected: "Rejected",
+};
+
+function CoverageStatusPill({ status, note }: { status: CoverageStatus; note: string | null }) {
+  const tone =
+    status === "Approved" ? styles.pillApproved : status === "Rejected" ? styles.pillRejected : styles.pillPending;
+  return (
+    <View style={styles.pillRow}>
+      <View style={[styles.pill, tone]}>
+        <Text style={styles.pillText}>{STATUS_LABEL[status]}</Text>
+      </View>
+      {status === "Rejected" && note ? <Text style={styles.pillNote}>{note}</Text> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
@@ -162,11 +184,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  serviceInfo: {
+    flex: 1,
+    gap: 2,
   },
   serviceLabel: {
     ...typography.body,
     color: colors.text,
+  },
+  pillRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
+  pill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 1,
+  },
+  pillPending: {
+    backgroundColor: colors.accentAmber,
+  },
+  pillApproved: {
+    backgroundColor: colors.accentGreen,
+  },
+  pillRejected: {
+    backgroundColor: colors.dangerBackground,
+  },
+  pillText: {
+    ...typography.label,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  pillNote: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    flexShrink: 1,
   },
   pickerLabel: {
     ...typography.label,

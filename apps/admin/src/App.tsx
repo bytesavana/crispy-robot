@@ -11,6 +11,7 @@ import { ZoneDetailPage } from '@/pages/catalog/ZoneDetailPage'
 import { ZoneLookupPage } from '@/pages/catalog/ZoneLookupPage'
 import { EstimatorPage } from '@/pages/catalog/EstimatorPage'
 import { ProvidersListPage } from '@/pages/providers/ProvidersListPage'
+import { ProviderApprovalsPage } from '@/pages/providers/ProviderApprovalsPage'
 import { NewProviderPage } from '@/pages/providers/NewProviderPage'
 import { ProviderDetailPage } from '@/pages/providers/ProviderDetailPage'
 import { ProviderOfferingsPage } from '@/pages/providers/ProviderOfferingsPage'
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
           { path: 'catalog/zones/:id', element: <ZoneDetailPage /> },
           { path: 'catalog/estimator', element: <EstimatorPage /> },
           { path: 'providers', element: <ProvidersListPage /> },
+          { path: 'providers/approvals', element: <ProviderApprovalsPage /> },
           { path: 'providers/new', element: <NewProviderPage /> },
           { path: 'providers/offerings', element: <ProviderOfferingsPage /> },
           { path: 'providers/:id', element: <ProviderDetailPage /> },

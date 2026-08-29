@@ -1,15 +1,17 @@
+import { getAccessToken } from "../auth";
 import { getProviderRegistryUrl, isDemoEnabled } from "../config";
 import { demoAddCoverage, demoDeactivateCoverage, demoListCoverage, demoSetProviderActive } from "../demo/demoStore";
 import { ApiError, request } from "../http";
 import type { BusinessType, ContactChannel, Provider, ProviderCoverage, ProviderKind } from "./types";
 
 /**
- * The sign-in hop: turns the signed-in IdentityServer user into the Provider they onboarded. Null
- * means "this user hasn't onboarded a provider yet", which is a normal outcome — not an error.
+ * The sign-in hop: turns the signed-in user (resolved by the gateway from the bearer token) into
+ * the Provider they onboarded. Null means "this user hasn't onboarded a provider yet", which is a
+ * normal outcome — not an error.
  */
-export async function findProviderByUserId(userId: string): Promise<Provider | null> {
+export async function findProviderForCurrentUser(): Promise<Provider | null> {
   try {
-    return await request<Provider>(getProviderRegistryUrl(), "/providers/by-user", { headers: { "X-User-Id": userId } });
+    return await request<Provider>(getProviderRegistryUrl(), "/providers/by-user");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;
@@ -25,25 +27,27 @@ export interface CreateProviderInput {
   kind: ProviderKind;
   businessType: BusinessType;
   phone: string;
-  userId: string;
+  /** Zone × category rows to request at onboarding — each lands Pending review. */
+  coverage: { zoneName: string; categoryCode: string }[];
 }
 
 /** Self-service onboarding: turns a signed-in user with no Provider record into a Pending one,
- * claimed by that user (UserId) so the next sign-in resolves straight to it. FulfillmentType is
- * always VendorFulfilled here — both onboarding paths describe someone who does their own work
+ * claimed by that user (the gateway injects the UserId from the token) so the next sign-in
+ * resolves straight to it, along with the coverage rows they picked (also Pending). FulfillmentType
+ * is always VendorFulfilled here — both onboarding paths describe someone who does their own work
  * ("fulfill your own orders" / "take on jobs by appointment"), never a business that hands off to a
  * platform courier. */
 export function createProvider(input: CreateProviderInput): Promise<Provider> {
   const contactChannels: ContactChannel[] = [{ type: "Phone", value: input.phone, isPrimary: true }];
   return request<Provider>(getProviderRegistryUrl(), "/providers", {
     method: "POST",
-    headers: { "X-User-Id": input.userId },
     body: {
       name: input.name,
       kind: input.kind,
       fulfillmentType: "VendorFulfilled",
       contactChannels,
       metadata: { businessType: input.businessType },
+      coverage: input.coverage.map((c) => ({ zoneId: null, zoneName: c.zoneName, categoryCode: c.categoryCode })),
     },
   });
 }
@@ -75,9 +79,13 @@ export interface AddCoverageResult {
 export async function addCoverage(providerId: string, zoneName: string, categoryCode: string): Promise<AddCoverageResult> {
   if (isDemoEnabled()) return demoAddCoverage(zoneName, categoryCode);
 
+  const token = await getAccessToken();
   const response = await fetch(`${getProviderRegistryUrl()}/providers/${providerId}/coverage`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ zoneId: null, zoneName, categoryCode }),
   });
 

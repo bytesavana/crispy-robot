@@ -1,10 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 
-import { findProviderByUserId } from "./api/providers";
+import { findProviderForCurrentUser } from "./api/providers";
 import type { BusinessType, Provider, ProviderKind } from "./api/types";
 import { getAccountInfo, signOut as clearTokens } from "./auth";
-import { getProviderId } from "./config";
 
 const SESSION_KEY = "mtaahub.providerSession";
 
@@ -21,6 +20,8 @@ export interface ProviderSession {
   businessType: BusinessType;
   isActive: boolean;
   verificationStatus: Provider["verificationStatus"];
+  /** Set when verification is Rejected — the reason ops gave, shown in the pending banner. */
+  verificationNote: string | null;
   phone: string;
   /** The zone shown in the Calendar header, if the provider has any active coverage. Best-effort —
    * a provider mid-onboarding may have none yet. */
@@ -61,8 +62,9 @@ function toSession(provider: Provider, phone: string): ProviderSession {
     businessType: resolveBusinessType(provider),
     isActive: provider.isActive,
     verificationStatus: provider.verificationStatus,
+    verificationNote: provider.verificationNote ?? null,
     phone,
-    primaryZoneName: provider.coverage.find((c) => c.isActive)?.zoneName ?? null,
+    primaryZoneName: provider.coverage.find((c) => c.isActive && c.status === "Approved")?.zoneName ?? null,
   };
 }
 
@@ -71,29 +73,7 @@ function toSession(provider: Provider, phone: string): ProviderSession {
  * thing, not a source of truth — it's refreshed from the registry on every resolve, so a runner
  * deactivated overnight finds out on their next cold start rather than never.
  */
-/** A dev session synthesised from EXPO_PUBLIC_PROVIDER_ID — no sign-in, no registry lookup. The id
- * matches the orchestrator's seeded fixtures (effective-happiness DevDataSeeder). */
-function devSession(providerId: string): ProviderSession {
-  return {
-    providerId,
-    name: "Faith W. (dev)",
-    kind: "Vendor",
-    businessType: "runner",
-    isActive: true,
-    verificationStatus: "Verified",
-    phone: "",
-    primaryZoneName: "Lifestyle Heights, Tatu City",
-  };
-}
-
 export async function resolveProviderSession(): Promise<SessionState> {
-  const devProviderId = getProviderId();
-  if (devProviderId) {
-    const session = devSession(devProviderId);
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    return { status: "ready", session };
-  }
-
   const account = await getAccountInfo();
   if (!account) {
     await AsyncStorage.removeItem(SESSION_KEY);
@@ -101,7 +81,7 @@ export async function resolveProviderSession(): Promise<SessionState> {
   }
 
   try {
-    const provider = await findProviderByUserId(account.id);
+    const provider = await findProviderForCurrentUser();
     if (!provider) {
       await AsyncStorage.removeItem(SESSION_KEY);
       return { status: "needsOnboarding", phone: account.phone };

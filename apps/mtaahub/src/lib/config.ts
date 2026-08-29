@@ -1,12 +1,9 @@
 import Constants from "expo-constants";
 
 type Extra = {
-  orchestratorUrl?: string;
-  providerRegistryUrl?: string;
-  serviceCatalogUrl?: string;
+  apiUrl?: string;
   identityServerUrl?: string;
   demoData?: boolean | string;
-  providerId?: string;
 };
 
 function extra(): Extra {
@@ -29,29 +26,30 @@ function resolve(envValue: string | undefined, configured: string | undefined, f
   return envValue || configured || fallback;
 }
 
+/** The API gateway, which fronts the four resource services (ServiceCatalog, ProviderRegistry,
+ * ServiceRequestOrchestrator, Consumers) behind one origin. IdentityServer is not behind it — see
+ * getIdentityServerUrl. */
+export function getApiUrl(): string {
+  return resolve(process.env.EXPO_PUBLIC_API_URL, extra().apiUrl, "http://localhost:5070");
+}
+
 export function getOrchestratorUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_ORCHESTRATOR_URL, extra().orchestratorUrl, "http://localhost:5063");
+  return `${getApiUrl()}/orchestrator`;
 }
 
 export function getProviderRegistryUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_PROVIDER_REGISTRY_URL, extra().providerRegistryUrl, "http://localhost:5064");
+  return `${getApiUrl()}/registry`;
 }
 
 export function getServiceCatalogUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_SERVICE_CATALOG_URL, extra().serviceCatalogUrl, "http://localhost:5062");
+  return `${getApiUrl()}/catalog`;
 }
 
+/** IdentityServer is called directly, not through the gateway: OTP request and token issuance are
+ * anonymous, and proxying Duende would mean reconfiguring its issuer/forwarded-headers or JWT
+ * validation breaks. */
 export function getIdentityServerUrl(): string {
   return resolve(process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL, extra().identityServerUrl, "http://localhost:5066");
-}
-
-/**
- * A fixed provider id to run as, skipping the IdentityServer sign-in and ProviderRegistry lookup.
- * For local development against the orchestrator's seeded fixtures — see effective-happiness's
- * DevDataSeeder, which stamps its jobs with this same id. Empty when a real session is expected.
- */
-export function getProviderId(): string | undefined {
-  return process.env.EXPO_PUBLIC_PROVIDER_ID || extra().providerId || undefined;
 }
 
 /** Serves the provider-registry/catalog reads from in-memory fixtures. Off unless asked for. */

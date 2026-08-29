@@ -33,16 +33,38 @@ export function demoListCategories(): Promise<CatalogCategory[]> {
   ]);
 }
 
+const DEMO_ZONE = "Lifestyle Heights, Tatu City";
+
+function demoRow(
+  suffix: string,
+  categoryCode: string,
+  isActive: boolean,
+  status: ProviderCoverage["status"],
+  reviewNote: string | null = null,
+): ProviderCoverage {
+  return {
+    id: `d0000000-0000-4000-8000-00000000c${suffix}`,
+    zoneId: "z1",
+    zoneName: DEMO_ZONE,
+    categoryCode,
+    isActive,
+    status,
+    requestedAt: "2026-01-01T08:00:00Z",
+    reviewedAt: status === "Pending" ? null : "2026-01-02T08:00:00Z",
+    reviewedBy: status === "Pending" ? null : "ops",
+    reviewNote,
+  };
+}
+
 let coverage: ProviderCoverage[] | null = null;
 
 function coverageStore(): ProviderCoverage[] {
-  coverage ??= [
-    { id: "d0000000-0000-4000-8000-00000000c001", zoneId: "z1", zoneName: "Lifestyle Heights, Tatu City", categoryCode: "laundry_pickup", isActive: true },
-    { id: "d0000000-0000-4000-8000-00000000c002", zoneId: "z1", zoneName: "Lifestyle Heights, Tatu City", categoryCode: "ironing", isActive: true },
-    { id: "d0000000-0000-4000-8000-00000000c003", zoneId: "z1", zoneName: "Lifestyle Heights, Tatu City", categoryCode: "errand_running", isActive: false },
-    { id: "d0000000-0000-4000-8000-00000000c004", zoneId: "z1", zoneName: "Lifestyle Heights, Tatu City", categoryCode: "house_cleaning", isActive: false },
-  ];
-  return coverage;
+  return (coverage ??= [
+    demoRow("001", "laundry_pickup", true, "Approved"),
+    demoRow("002", "ironing", true, "Approved"),
+    demoRow("003", "errand_running", false, "Pending"),
+    demoRow("004", "house_cleaning", false, "Rejected", "Send a photo ID to finish signup"),
+  ]);
 }
 
 export function demoListCoverage(): Promise<ProviderCoverage[]> {
@@ -56,13 +78,8 @@ export function demoAddCoverage(zoneName: string, categoryCode: string): Promise
     existing.isActive = true;
     return settle({ coverage: existing, error: null });
   }
-  const created: ProviderCoverage = {
-    id: `d0000000-0000-4000-8000-00000000c${String(store.length + 1).padStart(3, "0")}`,
-    zoneId: "z1",
-    zoneName,
-    categoryCode,
-    isActive: true,
-  };
+  const created = demoRow(String(store.length + 1).padStart(3, "0"), categoryCode, true, "Pending");
+  created.zoneName = zoneName;
   store.push(created);
   return settle({ coverage: created, error: null });
 }

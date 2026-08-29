@@ -6,9 +6,9 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { ServiceChip } from "@/components/ServiceChip";
 import { TextField } from "@/components/TextField";
-import { listCategories } from "@/lib/api/catalog";
+import { listCategories, listZones } from "@/lib/api/catalog";
 import { createProvider } from "@/lib/api/providers";
-import type { BusinessType, CatalogCategory } from "@/lib/api/types";
+import type { BusinessType, CatalogCategory, CatalogZone } from "@/lib/api/types";
 import { getAccountInfo } from "@/lib/auth";
 import { cacheProviderSession } from "@/lib/providerSession";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -16,6 +16,8 @@ import { colors, radii, spacing, typography } from "@/theme";
 export function BusinessInfoScreen() {
   const { phone, businessType } = useLocalSearchParams<{ phone: string; businessType: BusinessType }>();
   const [name, setName] = useState("");
+  const [zones, setZones] = useState<CatalogZone[]>([]);
+  const [zoneId, setZoneId] = useState<string | undefined>();
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +27,12 @@ export function BusinessInfoScreen() {
     listCategories()
       .then(setCategories)
       .catch(() => setCategories([]));
+    listZones()
+      .then((z) => {
+        setZones(z);
+        if (z.length === 1) setZoneId(z[0].id);
+      })
+      .catch(() => setZones([]));
   }, []);
 
   function toggle(code: string) {
@@ -36,6 +44,16 @@ export function BusinessInfoScreen() {
       setError("Give your business a name.");
       return;
     }
+    const zone = zones.find((z) => z.id === zoneId);
+    if (!zone) {
+      setError("Pick the area you work in.");
+      return;
+    }
+    if (selected.length === 0) {
+      setError("Pick at least one service you offer.");
+      return;
+    }
+
     setError(undefined);
     setIsSubmitting(true);
     try {
@@ -49,7 +67,7 @@ export function BusinessInfoScreen() {
         kind: "Vendor",
         businessType,
         phone,
-        userId: account.id,
+        coverage: selected.map((code) => ({ zoneName: zone.name, categoryCode: code })),
       });
       await cacheProviderSession(provider, phone);
       router.replace("/(app)/calendar");
@@ -82,6 +100,15 @@ export function BusinessInfoScreen() {
       </View>
 
       <View>
+        <Text style={styles.label}>Where do you work</Text>
+        <View style={styles.chipRow}>
+          {zones.map((zone) => (
+            <ServiceChip key={zone.id} label={zone.name} selected={zoneId === zone.id} onPress={() => setZoneId(zone.id)} />
+          ))}
+        </View>
+      </View>
+
+      <View>
         <Text style={styles.label}>Pin your location</Text>
         <Pressable
           style={styles.mapPlaceholder}
@@ -105,6 +132,10 @@ export function BusinessInfoScreen() {
           ))}
         </View>
       </View>
+
+      <Text style={styles.reviewNote}>
+        The MtaaPal team reviews new providers and each service before you start getting jobs.
+      </Text>
 
       <PrimaryButton label="Submit for verification" onPress={() => void submit()} isBusy={isSubmitting} style={styles.submit} />
     </ScrollView>
@@ -190,6 +221,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+  },
+  reviewNote: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
   },
   submit: {
     marginTop: spacing.md,

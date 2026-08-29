@@ -14,17 +14,20 @@ import { ErrorAlert } from '@/components/ErrorAlert'
 import { ActiveBadge, StatusBadge } from '@/components/StatusBadge'
 import { ContactChannelsEditor } from '@/components/ContactChannelsEditor'
 import { ConfirmActionButton } from '@/components/ConfirmActionButton'
+import { TextPromptButton } from '@/components/TextPromptButton'
 import { useAsync } from '@/lib/hooks/useAsync'
 import { ApiError } from '@/lib/api/client'
 import {
   activateProvider,
   addCoverage,
+  approveCoverage,
   deactivateCoverage,
   deactivateProvider,
   getProvider,
   listCoverage,
   listOfferings,
   matchProviders,
+  rejectCoverage,
   updateProvider,
   verifyProvider,
 } from '@/lib/api/providers'
@@ -59,6 +62,7 @@ export function ProviderDetailPage() {
   }, [provider.data])
 
   const [verifyStatus, setVerifyStatus] = useState('Verified')
+  const [showAdvancedVerify, setShowAdvancedVerify] = useState(false)
 
   const [coverageZoneName, setCoverageZoneName] = useState('')
   const [coverageCategory, setCoverageCategory] = useState('')
@@ -93,10 +97,10 @@ export function ProviderDetailPage() {
     }
   }
 
-  async function handleVerify() {
+  async function setVerification(status: string, reason?: string) {
     if (!id) return
     try {
-      await verifyProvider(id, { status: verifyStatus })
+      await verifyProvider(id, { status, reason: reason || null })
       provider.refetch()
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : 'Failed to update verification status.')
@@ -162,21 +166,52 @@ export function ProviderDetailPage() {
                   <StatusBadge status={provider.data.verificationStatus} />
                 </div>
                 <p className="text-sm text-muted-foreground">{provider.data.fulfillmentType}</p>
+                {provider.data.verificationReviewedBy && (
+                  <p className="text-xs text-muted-foreground">
+                    {provider.data.verificationStatus} by {provider.data.verificationReviewedBy}
+                    {provider.data.verificationReviewedAt &&
+                      ` · ${new Date(provider.data.verificationReviewedAt).toLocaleString()}`}
+                    {provider.data.verificationNote && ` · "${provider.data.verificationNote}"`}
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Select value={verifyStatus} onValueChange={setVerifyStatus}>
-                  <SelectTrigger size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Verified">Verified</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button type="button" size="sm" variant="outline" onClick={handleVerify}>
-                  <Check className="size-4" /> Set verification
+              <div className="flex flex-wrap items-center gap-2">
+                <ConfirmActionButton
+                  label="Approve"
+                  title="Approve provider"
+                  description={`"${provider.data.name}" becomes verified.`}
+                  variant="default"
+                  icon={<Check className="size-4" />}
+                  onConfirm={() => setVerification('Verified')}
+                />
+                <TextPromptButton
+                  label="Reject"
+                  title="Reject provider"
+                  fieldLabel="Reason"
+                  placeholder="Shown to the applicant"
+                  variant="destructive"
+                  onSubmit={(reason) => setVerification('Rejected', reason)}
+                />
+                <Button type="button" size="sm" variant="ghost" onClick={() => setShowAdvancedVerify((v) => !v)}>
+                  Advanced
                 </Button>
+                {showAdvancedVerify && (
+                  <>
+                    <Select value={verifyStatus} onValueChange={setVerifyStatus}>
+                      <SelectTrigger size="sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Verified">Verified</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setVerification(verifyStatus)}>
+                      Set status
+                    </Button>
+                  </>
+                )}
                 {provider.data.isActive ? (
                   <ConfirmActionButton
                     label="Deactivate"
@@ -289,7 +324,8 @@ export function ProviderDetailPage() {
                         <TableRow>
                           <TableHead>Zone</TableHead>
                           <TableHead>Category</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>Review</TableHead>
+                          <TableHead>Active</TableHead>
                           <TableHead />
                         </TableRow>
                       </TableHeader>
@@ -297,28 +333,60 @@ export function ProviderDetailPage() {
                         {coverage.data.map((c) => (
                           <TableRow key={c.id}>
                             <TableCell>{c.zoneName}</TableCell>
-                            <TableCell>{c.categoryCode}</TableCell>
+                            <TableCell className="font-mono text-xs">{c.categoryCode}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={c.status} />
+                              {c.reviewNote && (
+                                <span className="ml-2 text-xs text-muted-foreground">{c.reviewNote}</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <ActiveBadge isActive={c.isActive} />
                             </TableCell>
                             <TableCell className="text-right">
-                              {c.isActive && (
-                                <ConfirmActionButton
-                                  label="Deactivate"
-                                  title="Deactivate coverage"
-                                  description={`Provider will stop being matched for ${c.categoryCode} in ${c.zoneName}.`}
-                                  onConfirm={async () => {
-                                    await deactivateCoverage(id!, c.id)
-                                    coverage.refetch()
-                                  }}
-                                />
-                              )}
+                              <div className="flex justify-end gap-2">
+                                {c.status === 'Pending' && (
+                                  <>
+                                    <ConfirmActionButton
+                                      label="Approve"
+                                      title="Approve coverage"
+                                      description={`Provider becomes matchable for ${c.categoryCode} in ${c.zoneName}.`}
+                                      variant="default"
+                                      onConfirm={async () => {
+                                        await approveCoverage(id!, c.id)
+                                        coverage.refetch()
+                                      }}
+                                    />
+                                    <TextPromptButton
+                                      label="Reject"
+                                      title="Reject coverage"
+                                      fieldLabel="Reason"
+                                      variant="destructive"
+                                      onSubmit={async (reason) => {
+                                        await rejectCoverage(id!, c.id, { reason: reason || null })
+                                        coverage.refetch()
+                                      }}
+                                    />
+                                  </>
+                                )}
+                                {c.isActive && (
+                                  <ConfirmActionButton
+                                    label="Deactivate"
+                                    title="Deactivate coverage"
+                                    description={`Provider will stop being matched for ${c.categoryCode} in ${c.zoneName}.`}
+                                    onConfirm={async () => {
+                                      await deactivateCoverage(id!, c.id)
+                                      coverage.refetch()
+                                    }}
+                                  />
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
                         {coverage.data.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
                               No coverage configured.
                             </TableCell>
                           </TableRow>

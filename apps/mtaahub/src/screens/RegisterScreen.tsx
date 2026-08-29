@@ -1,35 +1,42 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TextField } from "@/components/TextField";
-import { NotOnboardedError, requestOtp } from "@/lib/auth";
+import { registerProvider } from "@/lib/auth";
 import { colors, spacing, typography } from "@/theme";
 
-export function SignInScreen() {
-  const [phone, setPhone] = useState("");
+/**
+ * Self-service provider sign-up, reached when sign-in finds no account for a number. Creates a
+ * provider-intent IdentityServer account (no linked Consumer) and sends an activation code; the
+ * business profile itself is built in the onboarding flow after sign-in.
+ */
+export function RegisterScreen() {
+  const params = useLocalSearchParams<{ phone?: string }>();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState(params.phone ?? "");
   const [error, setError] = useState<string | undefined>();
   const [isBusy, setIsBusy] = useState(false);
 
   async function submit() {
-    const identifier = phone.trim();
-    if (!identifier) {
-      setError("Enter the phone number you're registered with.");
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    if (!trimmedName) {
+      setError("Enter your name.");
+      return;
+    }
+    if (!trimmedPhone) {
+      setError("Enter your phone number.");
       return;
     }
 
     setIsBusy(true);
     setError(undefined);
     try {
-      await requestOtp(identifier);
-      router.push({ pathname: "/auth/verify", params: { phone: identifier } });
+      await registerProvider(trimmedName, trimmedPhone);
+      router.push({ pathname: "/auth/register-verify", params: { phone: trimmedPhone } });
     } catch (caught) {
-      // No account at all is a different situation from a bad code: this number can register.
-      if (caught instanceof NotOnboardedError) {
-        router.push({ pathname: "/auth/register", params: { phone: identifier } });
-        return;
-      }
       setError(caught instanceof Error ? caught.message : "Something went wrong.");
     } finally {
       setIsBusy(false);
@@ -40,12 +47,13 @@ export function SignInScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.title}>MtaaPal for Business</Text>
+          <Text style={styles.title}>Create your provider account</Text>
           <Text style={styles.subtitle}>
-            For the shops and runners who get MtaaPal orders done. Sign in with the number you were
-            registered with.
+            We&apos;ll text you a code to confirm this number. Next you&apos;ll tell us what you offer and where.
           </Text>
         </View>
+
+        <TextField label="Your name" value={name} onChangeText={setName} placeholder="e.g. Faith Wambui" autoCapitalize="words" />
 
         <TextField
           label="Phone number"
@@ -62,15 +70,6 @@ export function SignInScreen() {
         />
 
         <PrimaryButton label="Send code" onPress={() => void submit()} isBusy={isBusy} />
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push({ pathname: "/auth/register", params: { phone: phone.trim() } })}
-          hitSlop={8}
-          style={styles.link}
-        >
-          <Text style={styles.linkText}>New to MtaaPal for Business? Create an account</Text>
-        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -98,14 +97,5 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.body,
     color: colors.textMuted,
-  },
-  link: {
-    alignSelf: "center",
-    paddingVertical: spacing.sm,
-  },
-  linkText: {
-    ...typography.bodySmall,
-    color: colors.primaryLight,
-    fontWeight: "600",
   },
 });
