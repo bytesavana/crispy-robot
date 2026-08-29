@@ -18,6 +18,7 @@ import { ProviderOfferingsPage } from '@/pages/providers/ProviderOfferingsPage'
 import { RequestLookupPage } from '@/pages/requests/RequestLookupPage'
 import { RequestDetailPage } from '@/pages/requests/RequestDetailPage'
 import { OrdersOverviewPage } from '@/pages/requests/OrdersOverviewPage'
+import { RouteError } from '@/components/RouteError'
 import { ConsumersListPage } from '@/pages/consumers/ConsumersListPage'
 import { ConsumerDetailPage } from '@/pages/consumers/ConsumerDetailPage'
 
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
     children: [
       {
         element: <AppShell />,
+        errorElement: <RouteError />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
@@ -44,7 +46,7 @@ const router = createBrowserRouter([
           { path: 'providers/offerings', element: <ProviderOfferingsPage /> },
           { path: 'providers/:id', element: <ProviderDetailPage /> },
           { path: 'requests/lookup', element: <RequestLookupPage /> },
-          { path: 'requests/:id', element: <RequestDetailPage /> },
+          { path: 'requests/:id', element: <RequestDetailPage />, errorElement: <RouteError /> },
           { path: 'orders', element: <OrdersOverviewPage /> },
           { path: 'consumers', element: <ConsumersListPage /> },
           { path: 'consumers/:id', element: <ConsumerDetailPage /> },

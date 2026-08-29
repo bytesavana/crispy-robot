@@ -170,14 +170,22 @@ export interface CatalogItemDto {
 
 export interface ServiceTaskLineItemDto {
   id: string
-  catalogItemId: string
+  productId: string
+  offeringId: string
   providerId: string
   itemFamily: string
   displayName: string
   brand?: string | null
   packSize?: string | null
   quantity: number
-  unitPriceSnapshot: number
+  quotedUnitPrice: number
+  actualUnitPrice?: number | null
+  actualQuantity?: number | null
+  outcome: string
+  approval: string
+  proposedSubstituteProductId?: string | null
+  proposedSubstituteDisplayName?: string | null
+  proposedSubstituteUnitPrice?: number | null
 }
 
 export interface ServiceTaskDto {
@@ -185,16 +193,46 @@ export interface ServiceTaskDto {
   taskCode: string
   zoneId: string
   zoneName: string
+  providerId: string
+  providerName: string
+  vendorSelection: string
   fieldValues: Record<string, string>
   lineItems: ServiceTaskLineItemDto[]
   estimatedPrice: number
+  actualTotal?: number | null
   estimatedEtaMinutes: number
   status: string
-  stage: string
   assignedVendorRef?: string | null
   assignedRunnerRef?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface RequestedItemDto {
+  id: string
+  productId: string
+  quantity: number
+  pinnedProviderId?: string | null
+  itemFamily: string
+  displayName: string
+  brand?: string | null
+  packSize?: string | null
+}
+
+export interface RequestIntentDto {
+  id: string
+  taskCode: string
+  zoneId: string
+  zoneName: string
+  fieldValues: Record<string, string>
+  pinnedProviderId?: string | null
+  items: RequestedItemDto[]
+}
+
+export interface BasketDto {
+  serviceRequestId: string
+  basketRevision: number
+  intents: RequestIntentDto[]
 }
 
 export interface ServiceRequestDto {
@@ -202,6 +240,7 @@ export interface ServiceRequestDto {
   customerId: string
   agentRef: string
   createdAt: string
+  basket: BasketDto
   tasks: ServiceTaskDto[]
 }
 
@@ -253,7 +292,6 @@ export interface ProviderOfferDto {
   id: string
   providerId: string
   providerName: string
-  stage: string
   fulfillmentType: string
   attemptNumber: number
   offeredAt: string
@@ -268,12 +306,46 @@ export interface AdminServiceTaskDto extends ServiceTaskDto {
   offers: ProviderOfferDto[]
 }
 
+export interface AdminRunStopDto {
+  serviceTaskId: string
+  sequence: number
+  isDropped: boolean
+  taskCode: string
+  taskStatus: string
+}
+
+/** One runner-stage offer for a whole courier run — the runner-side counterpart of
+ * ProviderOfferDto, for "who was the trip offered to and what happened". */
+export interface AdminRunOfferDto {
+  id: string
+  providerId: string
+  providerName: string
+  attemptNumber: number
+  offeredAt: string
+  expiresAt: string
+  status: string
+  respondedAt?: string | null
+}
+
+export interface AdminRunDto {
+  id: string
+  status: string
+  assignedRunnerRef?: string | null
+  offerAttempts: number
+  createdAt: string
+  updatedAt: string
+  stops: AdminRunStopDto[]
+  offers: AdminRunOfferDto[]
+}
+
 export interface AdminServiceRequestDto {
   id: string
   customerId: string
   agentRef: string
   createdAt: string
+  basket: BasketDto
   tasks: AdminServiceTaskDto[]
+  runs: AdminRunDto[]
 }
 
 export interface AcceptProviderOfferRequest {
