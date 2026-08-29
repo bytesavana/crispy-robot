@@ -61,10 +61,7 @@ export async function fetchConversation(threadId: string): Promise<ConversationR
   return fetchWithAuthRetry<ConversationResume>(`/conversations/${threadId}`);
 }
 
-/** Registers this device's Expo push token against the signed-in customer (or guest device
- * id) — idempotent server-side, so safe to call on every app start/sign-in. Lets the backend
- * push a notification when a background fulfillment event (see effective-happiness) needs the
- * app to refresh an open or backgrounded conversation. */
+/** Idempotent server-side — safe to call on every app start / sign-in. */
 export async function registerPushToken(token: string): Promise<void> {
   await fetchWithAuthRetry<void>("/push-tokens", {
     method: "POST",
