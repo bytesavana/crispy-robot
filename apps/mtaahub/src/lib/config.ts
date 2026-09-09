@@ -4,6 +4,7 @@ type Extra = {
   apiUrl?: string;
   identityServerUrl?: string;
   demoData?: boolean | string;
+  eas?: { projectId?: string };
 };
 
 function extra(): Extra {
@@ -50,6 +51,12 @@ export function getServiceCatalogUrl(): string {
  * validation breaks. */
 export function getIdentityServerUrl(): string {
   return resolve(process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL, extra().identityServerUrl, "http://localhost:5066");
+}
+
+/** The Expo project `getExpoPushTokenAsync` needs. Empty until `eas init` is run for this app — push
+ * registration treats that as "not configured" and no-ops. */
+export function getEasProjectId(): string {
+  return resolve(process.env.EXPO_PUBLIC_EAS_PROJECT_ID, extra().eas?.projectId, "55ca19d3-346b-4d9d-b9af-e8c569a5a0b9");
 }
 
 /** Serves the provider-registry/catalog reads from in-memory fixtures. Off unless asked for. */

@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { refreshAccessToken } from "@/lib/auth";
+import { setupJobNotificationListeners } from "@/lib/pushNotifications";
 import { onAppStateChange, queryClient } from "@/lib/queryClient";
 import { colors } from "@/theme";
 
@@ -41,6 +42,8 @@ export default function RootLayout() {
     const subscription = AppState.addEventListener("change", onAppStateChange);
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => setupJobNotificationListeners(), []);
 
   if (!fontsLoaded) {
     return null;

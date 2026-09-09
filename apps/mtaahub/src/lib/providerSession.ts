@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { findProviderForCurrentUser } from "./api/providers";
 import type { BusinessType, Provider, ProviderKind } from "./api/types";
 import { getAccountInfo, signOut as clearTokens } from "./auth";
+import { unregisterPushTokenAsync } from "./pushNotifications";
 
 const SESSION_KEY = "mtaahub.providerSession";
 
@@ -119,6 +120,9 @@ export async function updateCachedIsActive(isActive: boolean): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  const cached = await AsyncStorage.getItem(SESSION_KEY);
+  const providerId = cached ? (JSON.parse(cached) as ProviderSession).providerId : null;
+  if (providerId) await unregisterPushTokenAsync(providerId).catch(() => {});
   await clearTokens();
   await AsyncStorage.removeItem(SESSION_KEY);
 }
