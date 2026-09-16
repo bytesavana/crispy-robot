@@ -129,6 +129,9 @@ export function useMtaaPalChat() {
       onTextMessageContentEvent({ messages: current }) {
         setMessages(toDisplayMessages(current));
       },
+      onMessagesChanged({ messages: current }) {
+        setMessages(toDisplayMessages(current));
+      },
       onRunErrorEvent({ event }) {
         appendErrorMessage(event.message ?? FRIENDLY_ERROR_MESSAGE);
       },

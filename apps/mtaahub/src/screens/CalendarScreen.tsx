@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorNotice } from "@/components/ErrorNotice";
 import { JobCard } from "@/components/JobCard";
 import { JobSummaryRow } from "@/components/JobSummaryRow";
+import { PendingBanner } from "@/components/PendingBanner";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { WeekStrip } from "@/components/WeekStrip";
 import { setProviderActive } from "@/lib/api/providers";
@@ -57,6 +58,7 @@ export function CalendarScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <DemoBanner />
+      <PendingBanner />
 
       <View style={styles.header}>
         <View style={styles.identity}>
@@ -85,7 +87,12 @@ export function CalendarScreen() {
               </View>
             ) : null}
           </Pressable>
-          <AvailabilityToggle isActive={isActive} onChange={(v) => void toggleActive(v)} isBusy={isTogglingActive} />
+          <AvailabilityToggle
+            isActive={isActive}
+            onChange={(v) => void toggleActive(v)}
+            isBusy={isTogglingActive}
+            disabled={session?.verificationStatus !== "Verified"}
+          />
         </View>
       </View>
 

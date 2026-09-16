@@ -16,6 +16,7 @@ import type { ProviderDto } from '@/types/dto'
 
 type StatusFilter = 'all' | 'active' | 'inactive'
 type KindFilter = 'all' | 'Vendor' | 'Runner'
+type VerificationFilter = 'all' | 'Pending' | 'Verified' | 'Rejected'
 type ViewMode = 'list' | 'byCategory'
 
 const UNCATEGORIZED = '__uncategorized__'
@@ -66,6 +67,7 @@ export function ProvidersListPage() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
+  const [verificationFilter, setVerificationFilter] = useState<VerificationFilter>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const {
@@ -77,8 +79,9 @@ export function ProvidersListPage() {
       listProviders({
         isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
         kind: kindFilter === 'all' ? undefined : kindFilter,
+        verificationStatus: verificationFilter === 'all' ? undefined : verificationFilter,
       }),
-    [statusFilter, kindFilter],
+    [statusFilter, kindFilter, verificationFilter],
   )
 
   const categories = useAsync(listCategories, [])
@@ -142,6 +145,14 @@ export function ProvidersListPage() {
               <TabsTrigger value="all">All kinds</TabsTrigger>
               <TabsTrigger value="Vendor">Vendor</TabsTrigger>
               <TabsTrigger value="Runner">Runner</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tabs value={verificationFilter} onValueChange={(v) => setVerificationFilter(v as VerificationFilter)}>
+            <TabsList>
+              <TabsTrigger value="all">Any verification</TabsTrigger>
+              <TabsTrigger value="Pending">Pending</TabsTrigger>
+              <TabsTrigger value="Verified">Verified</TabsTrigger>
+              <TabsTrigger value="Rejected">Rejected</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

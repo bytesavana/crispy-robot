@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, typography } from "@/theme";
 
 import { DemoBanner } from "./DemoBanner";
+import { PendingBanner } from "./PendingBanner";
 
 type ScreenProps = {
   title?: string;
@@ -18,6 +19,7 @@ export function Screen({ title, subtitle, action, children }: ScreenProps) {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <DemoBanner />
+      <PendingBanner />
       {title ? (
         <View style={styles.header}>
           <View style={styles.headerText}>

@@ -11,12 +11,14 @@ import { ZoneDetailPage } from '@/pages/catalog/ZoneDetailPage'
 import { ZoneLookupPage } from '@/pages/catalog/ZoneLookupPage'
 import { EstimatorPage } from '@/pages/catalog/EstimatorPage'
 import { ProvidersListPage } from '@/pages/providers/ProvidersListPage'
+import { ProviderApprovalsPage } from '@/pages/providers/ProviderApprovalsPage'
 import { NewProviderPage } from '@/pages/providers/NewProviderPage'
 import { ProviderDetailPage } from '@/pages/providers/ProviderDetailPage'
 import { ProviderOfferingsPage } from '@/pages/providers/ProviderOfferingsPage'
 import { RequestLookupPage } from '@/pages/requests/RequestLookupPage'
 import { RequestDetailPage } from '@/pages/requests/RequestDetailPage'
 import { OrdersOverviewPage } from '@/pages/requests/OrdersOverviewPage'
+import { RouteError } from '@/components/RouteError'
 import { ConsumersListPage } from '@/pages/consumers/ConsumersListPage'
 import { ConsumerDetailPage } from '@/pages/consumers/ConsumerDetailPage'
 
@@ -27,6 +29,7 @@ const router = createBrowserRouter([
     children: [
       {
         element: <AppShell />,
+        errorElement: <RouteError />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
@@ -38,11 +41,12 @@ const router = createBrowserRouter([
           { path: 'catalog/zones/:id', element: <ZoneDetailPage /> },
           { path: 'catalog/estimator', element: <EstimatorPage /> },
           { path: 'providers', element: <ProvidersListPage /> },
+          { path: 'providers/approvals', element: <ProviderApprovalsPage /> },
           { path: 'providers/new', element: <NewProviderPage /> },
           { path: 'providers/offerings', element: <ProviderOfferingsPage /> },
           { path: 'providers/:id', element: <ProviderDetailPage /> },
           { path: 'requests/lookup', element: <RequestLookupPage /> },
-          { path: 'requests/:id', element: <RequestDetailPage /> },
+          { path: 'requests/:id', element: <RequestDetailPage />, errorElement: <RouteError /> },
           { path: 'orders', element: <OrdersOverviewPage /> },
           { path: 'consumers', element: <ConsumersListPage /> },
           { path: 'consumers/:id', element: <ConsumerDetailPage /> },

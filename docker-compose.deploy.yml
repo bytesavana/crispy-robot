@@ -1,0 +1,15 @@
+# Deploy compose for the mtaapal-deploy self-hosted runner. Vite bakes VITE_* into the
+# static bundle at build time, so these are build args, not container env vars — the
+# deployed admin only talks to the Gateway; VITE_SERVICE_CATALOG_URL/etc. from
+# apps/admin/.env.example are left unset here until admin routes everything through it.
+services:
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_URL: http://192.168.1.185:5070
+        VITE_OPS_KEY: dev-ops-key
+    restart: unless-stopped
+    ports:
+      - "8090:80"

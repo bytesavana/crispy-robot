@@ -1,5 +1,4 @@
 import type { BusinessType, ServiceTask, VendorTaskOffer } from "./api/types";
-import { getDemoCustomerName, isDemoEnabled } from "./demo/demoStore";
 import type { StatusTone } from "@/theme";
 
 /**
@@ -8,10 +7,9 @@ import type { StatusTone } from "@/theme";
  * VendorTaskOffer offering it) rather than replacing it — `raw` carries the whole DTO through for
  * the detail screen and for any real write call, which all key off the task/offer ids.
  *
- * `customerName` is the one field the backend genuinely doesn't have yet: ServiceTaskDto carries no
- * customer reference at all (by design — a store has no customer context). Real data leaves it
- * `null` and the UI omits the row rather than showing a placeholder; demo mode fills it in because
- * showing that row is the whole point of the fixtures.
+ * `customerName` has no first-class field on ServiceTaskDto (a store has no customer context by
+ * design); it rides along in `fieldValues.customer_name` when the orchestrator has one, and the UI
+ * omits the row rather than showing a placeholder when it doesn't.
  */
 export interface Job {
   taskId: string;
@@ -83,10 +81,8 @@ export function formatJobTitle(taskCode: string): string {
     .join(" ");
 }
 
-function customerNameFor(taskId: string): string | null {
-  // ServiceTaskDto carries no customer reference — a store has no customer context by design — so
-  // this only ever resolves in demo mode, where the fixtures supply one for exactly this purpose.
-  return isDemoEnabled() ? getDemoCustomerName(taskId) : null;
+function customerNameFor(task: ServiceTask): string | null {
+  return task.fieldValues?.customer_name ?? null;
 }
 
 export function fromOffer(offer: VendorTaskOffer): Job {
@@ -94,7 +90,7 @@ export function fromOffer(offer: VendorTaskOffer): Job {
     taskId: offer.task.id,
     offerId: offer.offerId,
     title: formatJobTitle(offer.task.taskCode),
-    customerName: customerNameFor(offer.task.id),
+    customerName: customerNameFor(offer.task),
     zoneName: offer.task.zoneName,
     expiresAt: offer.expiresAt,
     scheduledAt: offer.task.createdAt,
@@ -118,7 +114,7 @@ export function fromTask(task: ServiceTask, isLocallyStarted: boolean, offerId: 
     taskId: task.id,
     offerId,
     title: formatJobTitle(task.taskCode),
-    customerName: customerNameFor(task.id),
+    customerName: customerNameFor(task),
     zoneName: task.zoneName,
     expiresAt: null,
     scheduledAt: task.createdAt,

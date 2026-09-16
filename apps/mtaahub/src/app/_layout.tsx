@@ -3,14 +3,18 @@ import {
   PlayfairDisplay_600SemiBold,
   useFonts,
 } from "@expo-google-fonts/playfair-display";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { AppState } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { refreshAccessToken } from "@/lib/auth";
+import { setupJobNotificationListeners } from "@/lib/pushNotifications";
+import { onAppStateChange, queryClient } from "@/lib/queryClient";
 import { colors } from "@/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -34,26 +38,35 @@ export default function RootLayout() {
     refreshAccessToken().catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", onAppStateChange);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => setupJobNotificationListeners(), []);
+
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(app)" />
-        </Stack>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="(app)" />
+          </Stack>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

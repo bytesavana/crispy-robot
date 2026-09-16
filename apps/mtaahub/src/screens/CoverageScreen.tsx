@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 
 import { ErrorNotice } from "@/components/ErrorNotice";
@@ -9,9 +10,9 @@ import { ServiceChip } from "@/components/ServiceChip";
 import { TextField } from "@/components/TextField";
 import { listCategories } from "@/lib/api/catalog";
 import { addCoverage, deactivateCoverage, listCoverage } from "@/lib/api/providers";
-import type { CatalogCategory, ProviderCoverage } from "@/lib/api/types";
+import type { CoverageStatus, ProviderCoverage } from "@/lib/api/types";
 import { useProviderSession } from "@/lib/providerSession";
-import { usePolling } from "@/lib/usePolling";
+import { queryKeys } from "@/lib/queryKeys";
 import { colors, radii, spacing, typography } from "@/theme";
 
 /** What a shop or runner is set up to be offered: which zones, and which of the platform's
@@ -19,27 +20,57 @@ import { colors, radii, spacing, typography } from "@/theme";
  * deleting it, so re-enabling later doesn't lose the zone/category pairing. */
 export function CoverageScreen() {
   const session = useProviderSession();
+  const providerId = session?.providerId;
+  const queryClient = useQueryClient();
 
-  const fetcher = useCallback(async (): Promise<ProviderCoverage[]> => {
-    if (!session) return [];
-    return listCoverage(session.providerId);
-  }, [session]);
+  const coverageKey = queryKeys.coverage(providerId ?? "");
+  const { data: coverage, error, refetch } = useQuery({
+    queryKey: coverageKey,
+    queryFn: () => listCoverage(providerId!),
+    enabled: !!providerId,
+    refetchInterval: 60_000,
+  });
+  const errorMessage = error instanceof Error ? error.message : null;
 
-  const { data: coverage, error, refresh } = usePolling(fetcher, 60_000);
-  const [categories, setCategories] = useState<CatalogCategory[] | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { data: categories } = useQuery({
+    queryKey: queryKeys.categories(),
+    queryFn: listCategories,
+    staleTime: Infinity,
+  });
+
   const [addingZone, setAddingZone] = useState(false);
   const [newZoneName, setNewZoneName] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [isSubmittingZone, setIsSubmittingZone] = useState(false);
 
-  // Fetched once up front rather than only when "add zone" opens — the existing rows need real
-  // category names too (see categoryName below), not just the picker for a new one.
-  useEffect(() => {
-    listCategories()
-      .then(setCategories)
-      .catch(() => setCategories([]));
-  }, []);
+  const toggleMutation = useMutation({
+    mutationFn: async ({ row, nextValue }: { row: ProviderCoverage; nextValue: boolean }) => {
+      if (nextValue) {
+        const result = await addCoverage(providerId!, row.zoneName, row.categoryCode);
+        if (result.error) throw new Error(result.error);
+      } else {
+        await deactivateCoverage(providerId!, row.id);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: coverageKey }),
+    onError: (caught) => Alert.alert("Couldn't update", caught instanceof Error ? caught.message : "Try again."),
+  });
+  const busyId = toggleMutation.isPending ? (toggleMutation.variables?.row.id ?? null) : null;
+
+  const addZoneMutation = useMutation({
+    mutationFn: async (codes: string[]) => {
+      for (const code of codes) {
+        const result = await addCoverage(providerId!, newZoneName.trim(), code);
+        if (result.error) throw new Error(result.error);
+      }
+    },
+    onSuccess: () => {
+      setAddingZone(false);
+      setNewZoneName("");
+      setSelectedCategories([]);
+      queryClient.invalidateQueries({ queryKey: coverageKey });
+    },
+    onError: (caught) => Alert.alert("Couldn't add that zone", caught instanceof Error ? caught.message : "Try again."),
+  });
 
   const rows = coverage ?? [];
   const byZone = new Map<string, ProviderCoverage[]>();
@@ -51,54 +82,21 @@ export function CoverageScreen() {
     return categories?.find((c) => c.code === code)?.name ?? code;
   }
 
-  async function toggle(row: ProviderCoverage, nextValue: boolean) {
-    if (!session) return;
-    setBusyId(row.id);
-    try {
-      if (nextValue) {
-        const result = await addCoverage(session.providerId, row.zoneName, row.categoryCode);
-        if (result.error) throw new Error(result.error);
-      } else {
-        await deactivateCoverage(session.providerId, row.id);
-      }
-      refresh();
-    } catch (caught) {
-      Alert.alert("Couldn't update", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-
   function toggleSelected(code: string) {
     setSelectedCategories((current) => (current.includes(code) ? current.filter((c) => c !== code) : [...current, code]));
   }
 
-  async function submitZone() {
-    if (!session || !newZoneName.trim() || selectedCategories.length === 0) {
+  function submitZone() {
+    if (!providerId || !newZoneName.trim() || selectedCategories.length === 0) {
       Alert.alert("Almost there", "Name the zone and pick at least one service.");
       return;
     }
-    setIsSubmittingZone(true);
-    try {
-      for (const code of selectedCategories) {
-        const result = await addCoverage(session.providerId, newZoneName.trim(), code);
-        if (result.error) throw new Error(result.error);
-      }
-      setAddingZone(false);
-      setNewZoneName("");
-      setSelectedCategories([]);
-      refresh();
-    } catch (caught) {
-      Alert.alert("Couldn't add that zone", caught instanceof Error ? caught.message : "Try again.");
-    } finally {
-      setIsSubmittingZone(false);
-    }
+    addZoneMutation.mutate(selectedCategories);
   }
 
   return (
     <Screen title="Coverage & services">
-      {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
+      {errorMessage ? <ErrorNotice message={errorMessage} onRetry={refetch} /> : null}
 
       <ScrollView contentContainerStyle={styles.content}>
         {[...byZone.entries()].map(([zoneName, zoneRows]) => (
@@ -106,10 +104,13 @@ export function CoverageScreen() {
             <Text style={styles.zoneTitle}>{zoneName}</Text>
             {zoneRows.map((row) => (
               <View key={row.id} style={styles.serviceRow}>
-                <Text style={styles.serviceLabel}>{categoryName(row.categoryCode)}</Text>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceLabel}>{categoryName(row.categoryCode)}</Text>
+                  <CoverageStatusPill status={row.status} note={row.reviewNote} />
+                </View>
                 <Switch
                   value={row.isActive}
-                  onValueChange={(next) => void toggle(row, next)}
+                  onValueChange={(nextValue) => toggleMutation.mutate({ row, nextValue })}
                   disabled={busyId === row.id}
                   trackColor={{ false: colors.border, true: colors.success }}
                   thumbColor={colors.surface}
@@ -133,14 +134,33 @@ export function CoverageScreen() {
                 />
               ))}
             </View>
-            <PrimaryButton label="Add zone" onPress={() => void submitZone()} isBusy={isSubmittingZone} />
-            <OutlineButton label="Cancel" onPress={() => setAddingZone(false)} disabled={isSubmittingZone} />
+            <PrimaryButton label="Add zone" onPress={submitZone} isBusy={addZoneMutation.isPending} />
+            <OutlineButton label="Cancel" onPress={() => setAddingZone(false)} disabled={addZoneMutation.isPending} />
           </View>
         ) : (
           <OutlineButton label="+ Add coverage zone" onPress={() => setAddingZone(true)} />
         )}
       </ScrollView>
     </Screen>
+  );
+}
+
+const STATUS_LABEL: Record<CoverageStatus, string> = {
+  Pending: "Pending review",
+  Approved: "Approved",
+  Rejected: "Rejected",
+};
+
+function CoverageStatusPill({ status, note }: { status: CoverageStatus; note: string | null }) {
+  const tone =
+    status === "Approved" ? styles.pillApproved : status === "Rejected" ? styles.pillRejected : styles.pillPending;
+  return (
+    <View style={styles.pillRow}>
+      <View style={[styles.pill, tone]}>
+        <Text style={styles.pillText}>{STATUS_LABEL[status]}</Text>
+      </View>
+      {status === "Rejected" && note ? <Text style={styles.pillNote}>{note}</Text> : null}
+    </View>
   );
 }
 
@@ -164,11 +184,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  serviceInfo: {
+    flex: 1,
+    gap: 2,
   },
   serviceLabel: {
     ...typography.body,
     color: colors.text,
+  },
+  pillRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexWrap: "wrap",
+  },
+  pill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 1,
+  },
+  pillPending: {
+    backgroundColor: colors.accentAmber,
+  },
+  pillApproved: {
+    backgroundColor: colors.accentGreen,
+  },
+  pillRejected: {
+    backgroundColor: colors.dangerBackground,
+  },
+  pillText: {
+    ...typography.label,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  pillNote: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    flexShrink: 1,
   },
   pickerLabel: {
     ...typography.label,

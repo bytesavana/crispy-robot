@@ -1,9 +1,14 @@
 /**
- * The one fetch helper for every effective-happiness service. Ported from the admin console's
- * client.ts, which already knows this backend's quirk: its exception filters return
+ * The one fetch helper for every backend call through the API gateway. Ported from the admin
+ * console's client.ts, which already knows this backend's quirk: its exception filters return
  * `new ObjectResult(message)`, so an error body is a bare quoted string rather than
  * `{ message: "..." }`.
+ *
+ * Every call carries the access token as a bearer — the gateway validates it and injects the
+ * downstream `X-User-Id`, so callers never send identity headers themselves. IdentityServer's own
+ * endpoints don't go through here (see src/lib/auth.ts).
  */
+import { getAccessToken } from "./auth";
 
 export class ApiError extends Error {
   status: number;
@@ -44,11 +49,13 @@ function withQuery(path: string, query?: RequestOptions["query"]): string {
 
 export async function request<T>(baseUrl: string, path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers, query, ...rest } = options;
+  const token = await getAccessToken();
 
   const response = await fetch(`${baseUrl}${withQuery(path, query)}`, {
     ...rest,
     headers: {
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,

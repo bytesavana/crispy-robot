@@ -10,6 +10,7 @@ import {
   Users,
   Package,
   Tags,
+  ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +42,7 @@ const groups: NavGroup[] = [
     label: 'Providers',
     items: [
       { to: '/providers', label: 'All providers', icon: Truck, end: true },
+      { to: '/providers/approvals', label: 'Onboarding approvals', icon: ShieldCheck },
       { to: '/providers/offerings', label: 'Offerings', icon: Tags },
     ],
   },

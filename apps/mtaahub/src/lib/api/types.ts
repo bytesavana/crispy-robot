@@ -93,22 +93,36 @@ export interface ContactChannel {
   isPrimary: boolean;
 }
 
+/** Ops review state of one coverage row. A row is only matched for work when it's Approved and
+ * active (and the provider is Verified) — so adding a service, at onboarding or later, waits for
+ * approval. */
+export type CoverageStatus = "Pending" | "Approved" | "Rejected";
+
 export interface ProviderCoverage {
   id: string;
   zoneId: string;
   zoneName: string;
   categoryCode: string;
   isActive: boolean;
+  status: CoverageStatus;
+  requestedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  reviewNote: string | null;
 }
 
 export interface Provider {
   id: string;
   name: string;
+  userId: string | null;
   kind: ProviderKind;
   fulfillmentType: "VendorFulfilled" | "RunnerFulfilled";
   isActive: boolean;
   verificationStatus: "Pending" | "Verified" | "Rejected";
   verifiedAt: string | null;
+  verificationReviewedAt: string | null;
+  verificationReviewedBy: string | null;
+  verificationNote: string | null;
   contactChannels: ContactChannel[];
   latitude: number | null;
   longitude: number | null;
@@ -121,5 +135,10 @@ export interface Provider {
 
 export interface CatalogCategory {
   code: string;
+  name: string;
+}
+
+export interface CatalogZone {
+  id: string;
   name: string;
 }

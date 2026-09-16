@@ -1,35 +1,33 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TextField } from "@/components/TextField";
-import { NotOnboardedError, requestOtp } from "@/lib/auth";
+import { activateAndSignIn } from "@/lib/auth";
 import { colors, spacing, typography } from "@/theme";
 
-export function SignInScreen() {
-  const [phone, setPhone] = useState("");
+/** Confirms the activation code from registration, then drops the person straight into onboarding
+ * signed in — the root resolver sees a signed-in user with no Provider record and routes to the
+ * role picker. */
+export function RegisterVerifyScreen() {
+  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [isBusy, setIsBusy] = useState(false);
 
   async function submit() {
-    const identifier = phone.trim();
-    if (!identifier) {
-      setError("Enter the phone number you're registered with.");
+    if (!code.trim()) {
+      setError("Enter the code we sent you.");
       return;
     }
 
     setIsBusy(true);
     setError(undefined);
     try {
-      await requestOtp(identifier);
-      router.push({ pathname: "/auth/verify", params: { phone: identifier } });
+      await activateAndSignIn(phone, code.trim());
+      router.replace("/");
     } catch (caught) {
-      // No account at all is a different situation from a bad code: this number can register.
-      if (caught instanceof NotOnboardedError) {
-        router.push({ pathname: "/auth/register", params: { phone: identifier } });
-        return;
-      }
       setError(caught instanceof Error ? caught.message : "Something went wrong.");
     } finally {
       setIsBusy(false);
@@ -40,36 +38,32 @@ export function SignInScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.title}>MtaaPal for Business</Text>
-          <Text style={styles.subtitle}>
-            For the shops and runners who get MtaaPal orders done. Sign in with the number you were
-            registered with.
-          </Text>
+          <Text style={styles.title}>Confirm your number</Text>
+          <Text style={styles.subtitle}>We sent a code to {phone}.</Text>
         </View>
 
         <TextField
-          label="Phone number"
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+254 7XX XXX XXX"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          autoCapitalize="none"
+          label="Code"
+          value={code}
+          onChangeText={setCode}
+          placeholder="123456"
+          keyboardType="number-pad"
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
           error={error}
           onSubmitEditing={() => void submit()}
           returnKeyType="go"
         />
 
-        <PrimaryButton label="Send code" onPress={() => void submit()} isBusy={isBusy} />
+        <PrimaryButton label="Confirm" onPress={() => void submit()} isBusy={isBusy} />
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push({ pathname: "/auth/register", params: { phone: phone.trim() } })}
+          onPress={() => router.replace("/auth/sign-in")}
           hitSlop={8}
           style={styles.link}
         >
-          <Text style={styles.linkText}>New to MtaaPal for Business? Create an account</Text>
+          <Text style={styles.linkText}>Wrong number? Start over</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -89,7 +83,6 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: spacing.sm,
-    marginBottom: spacing.sm,
   },
   title: {
     ...typography.headingLarge,

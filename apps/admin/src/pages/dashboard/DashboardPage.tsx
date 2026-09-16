@@ -69,7 +69,11 @@ export function DashboardPage() {
   const activeProviders = providers.filter((p) => p.isActive).length
   const vendorCount = providers.filter((p) => p.kind === 'Vendor').length
   const runnerCount = providers.filter((p) => p.kind === 'Runner').length
-  const pendingVerification = providers.filter((p) => p.verificationStatus !== 'Verified').length
+  const pendingVerification = providers.filter((p) => p.verificationStatus === 'Pending').length
+  const pendingServices = providers.reduce(
+    (n, p) => n + p.coverage.filter((c) => c.status === 'Pending').length,
+    0,
+  )
   const activeConsumers = consumers.filter((c) => c.isActive).length
   const availableOfferings = offerings.filter((o) => o.isAvailable).length
 
@@ -122,9 +126,9 @@ export function DashboardPage() {
             />
             <StatTile
               icon={ShieldCheck}
-              label="Pending verification"
-              value={String(pendingVerification)}
-              hint="VerificationStatus ≠ Verified"
+              label="Awaiting review"
+              value={String(pendingVerification + pendingServices)}
+              hint={`${pendingVerification} providers, ${pendingServices} added services`}
             />
             <StatTile
               icon={Users}
@@ -216,8 +220,8 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <Button variant="outline" size="sm" className="justify-start" asChild>
-              <Link to="/providers">
-                <ShieldCheck className="size-4" /> Verify a provider
+              <Link to="/providers/approvals">
+                <ShieldCheck className="size-4" /> Onboarding approvals
               </Link>
             </Button>
             <Button variant="outline" size="sm" className="justify-start" asChild>

@@ -1,7 +1,7 @@
-// Shared fetch helper for the four effective-happiness services. Calls go straight
-// from the browser to each service's own port — there's no proxy/BFF for this
-// internal tool, so CORS must be enabled on each service (see the CORS section
-// of the admin app plan for the backend-side change).
+// Shared fetch helper for the effective-happiness backend. Provider calls go through
+// the API gateway (one origin, ops-key gated); catalog / orchestrator / consumers calls
+// still go straight to each service's own port, since only ProviderRegistry has an
+// `admin/*` surface the gateway can gate so far.
 
 export class ApiError extends Error {
   status: number
@@ -63,6 +63,11 @@ export async function request<T>(baseUrl: string, path: string, options: Request
   return text ? (JSON.parse(text) as T) : (undefined as T)
 }
 
+function requireEnv(key: string, fallback: string): string {
+  const value = (import.meta.env as Record<string, string | undefined>)[key]
+  return value ?? fallback
+}
+
 export function withAdminIdentity(headers?: Record<string, string>): Record<string, string> {
   return {
     'X-Customer-Id': ADMIN_IDENTITY,
@@ -71,15 +76,20 @@ export function withAdminIdentity(headers?: Record<string, string>): Record<stri
   }
 }
 
-function requireEnv(key: string, fallback: string): string {
-  const value = (import.meta.env as Record<string, string | undefined>)[key]
-  return value ?? fallback
+// The shared ops key the gateway checks on provider routes. Placeholder for v1, same as the
+// placeholder login — swap for a real ops token once IdentityServer has ops accounts.
+export const OPS_KEY = requireEnv('VITE_OPS_KEY', 'dev-ops-key')
+
+export function withOpsKey(headers?: Record<string, string>): Record<string, string> {
+  return { 'X-Ops-Key': OPS_KEY, ...headers }
 }
 
+const API_URL = requireEnv('VITE_API_URL', 'http://localhost:5070')
+
+export const PROVIDER_REGISTRY_URL = `${API_URL}/registry`
 export const SERVICE_CATALOG_URL = requireEnv('VITE_SERVICE_CATALOG_URL', 'http://localhost:5062')
 export const SERVICE_REQUEST_ORCHESTRATOR_URL = requireEnv(
   'VITE_SERVICE_REQUEST_ORCHESTRATOR_URL',
   'http://localhost:5063',
 )
-export const PROVIDER_REGISTRY_URL = requireEnv('VITE_PROVIDER_REGISTRY_URL', 'http://localhost:5064')
 export const CONSUMERS_URL = requireEnv('VITE_CONSUMERS_URL', 'http://localhost:5065')

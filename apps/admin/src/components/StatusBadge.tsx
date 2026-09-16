@@ -7,18 +7,32 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   // generic active/inactive
   active: 'default',
   inactive: 'outline',
-  // provider verification
+  // provider verification / coverage review
   verified: 'default',
+  approved: 'default',
   pending: 'outline',
   rejected: 'destructive',
   // task/request lifecycle
   draft: 'outline',
+  planned: 'outline',
+  awaitingvendor: 'outline',
+  readyforpickup: 'secondary',
+  shopping: 'secondary',
   assigned: 'secondary',
   inprogress: 'secondary',
   started: 'secondary',
   completed: 'default',
+  partiallycompleted: 'secondary',
   cancelled: 'destructive',
   failed: 'destructive',
+  unfulfillable: 'destructive',
+  abandoned: 'destructive',
+  decomposed: 'outline',
+  // offer lifecycle (vendor + runner)
+  forming: 'outline',
+  offered: 'outline',
+  accepted: 'default',
+  expired: 'destructive',
 }
 
 export function StatusBadge({ status }: { status: string }) {

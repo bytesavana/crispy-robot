@@ -1,0 +1,10 @@
+**/node_modules/
+**/dist/
+.git/
+.expo/
+apps/mtaapal/ios/
+apps/mtaapal/android/
+apps/mtaahub/ios/
+apps/mtaahub/android/
+*.md
+!README.md

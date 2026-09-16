@@ -65,6 +65,8 @@ export interface ContactChannelDto {
 
 export type VerificationStatus = 'Pending' | 'Verified' | 'Rejected'
 
+export type CoverageStatus = 'Pending' | 'Approved' | 'Rejected'
+
 export type ProviderKind = 'Vendor' | 'Runner'
 
 export interface ProviderDto {
@@ -75,6 +77,9 @@ export interface ProviderDto {
   isActive: boolean
   verificationStatus: string
   verifiedAt?: string | null
+  verificationReviewedAt?: string | null
+  verificationReviewedBy?: string | null
+  verificationNote?: string | null
   contactChannels: ContactChannelDto[]
   latitude?: number | null
   longitude?: number | null
@@ -92,6 +97,7 @@ export interface CreateProviderRequest {
   latitude?: number | null
   longitude?: number | null
   metadata?: Record<string, unknown>
+  coverage?: AddCoverageRequest[]
 }
 
 export interface UpdateProviderRequest {
@@ -106,6 +112,7 @@ export interface UpdateProviderRequest {
 
 export interface VerifyProviderRequest {
   status: string
+  reason?: string | null
 }
 
 export interface ProviderCoverageDto {
@@ -114,12 +121,21 @@ export interface ProviderCoverageDto {
   zoneName: string
   categoryCode: string
   isActive: boolean
+  status: CoverageStatus
+  requestedAt: string
+  reviewedAt?: string | null
+  reviewedBy?: string | null
+  reviewNote?: string | null
 }
 
 export interface AddCoverageRequest {
   zoneId?: string | null
   zoneName?: string | null
   categoryCode: string
+}
+
+export interface RejectCoverageRequest {
+  reason?: string | null
 }
 
 export interface AddCoverageResponse {
@@ -154,14 +170,22 @@ export interface CatalogItemDto {
 
 export interface ServiceTaskLineItemDto {
   id: string
-  catalogItemId: string
+  productId: string
+  offeringId: string
   providerId: string
   itemFamily: string
   displayName: string
   brand?: string | null
   packSize?: string | null
   quantity: number
-  unitPriceSnapshot: number
+  quotedUnitPrice: number
+  actualUnitPrice?: number | null
+  actualQuantity?: number | null
+  outcome: string
+  approval: string
+  proposedSubstituteProductId?: string | null
+  proposedSubstituteDisplayName?: string | null
+  proposedSubstituteUnitPrice?: number | null
 }
 
 export interface ServiceTaskDto {
@@ -169,16 +193,46 @@ export interface ServiceTaskDto {
   taskCode: string
   zoneId: string
   zoneName: string
+  providerId: string
+  providerName: string
+  vendorSelection: string
   fieldValues: Record<string, string>
   lineItems: ServiceTaskLineItemDto[]
   estimatedPrice: number
+  actualTotal?: number | null
   estimatedEtaMinutes: number
   status: string
-  stage: string
   assignedVendorRef?: string | null
   assignedRunnerRef?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface RequestedItemDto {
+  id: string
+  productId: string
+  quantity: number
+  pinnedProviderId?: string | null
+  itemFamily: string
+  displayName: string
+  brand?: string | null
+  packSize?: string | null
+}
+
+export interface RequestIntentDto {
+  id: string
+  taskCode: string
+  zoneId: string
+  zoneName: string
+  fieldValues: Record<string, string>
+  pinnedProviderId?: string | null
+  items: RequestedItemDto[]
+}
+
+export interface BasketDto {
+  serviceRequestId: string
+  basketRevision: number
+  intents: RequestIntentDto[]
 }
 
 export interface ServiceRequestDto {
@@ -186,6 +240,7 @@ export interface ServiceRequestDto {
   customerId: string
   agentRef: string
   createdAt: string
+  basket: BasketDto
   tasks: ServiceTaskDto[]
 }
 
@@ -237,7 +292,6 @@ export interface ProviderOfferDto {
   id: string
   providerId: string
   providerName: string
-  stage: string
   fulfillmentType: string
   attemptNumber: number
   offeredAt: string
@@ -252,12 +306,46 @@ export interface AdminServiceTaskDto extends ServiceTaskDto {
   offers: ProviderOfferDto[]
 }
 
+export interface AdminRunStopDto {
+  serviceTaskId: string
+  sequence: number
+  isDropped: boolean
+  taskCode: string
+  taskStatus: string
+}
+
+/** One runner-stage offer for a whole courier run — the runner-side counterpart of
+ * ProviderOfferDto, for "who was the trip offered to and what happened". */
+export interface AdminRunOfferDto {
+  id: string
+  providerId: string
+  providerName: string
+  attemptNumber: number
+  offeredAt: string
+  expiresAt: string
+  status: string
+  respondedAt?: string | null
+}
+
+export interface AdminRunDto {
+  id: string
+  status: string
+  assignedRunnerRef?: string | null
+  offerAttempts: number
+  createdAt: string
+  updatedAt: string
+  stops: AdminRunStopDto[]
+  offers: AdminRunOfferDto[]
+}
+
 export interface AdminServiceRequestDto {
   id: string
   customerId: string
   agentRef: string
   createdAt: string
+  basket: BasketDto
   tasks: AdminServiceTaskDto[]
+  runs: AdminRunDto[]
 }
 
 export interface AcceptProviderOfferRequest {

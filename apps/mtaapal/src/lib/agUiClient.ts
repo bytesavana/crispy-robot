@@ -17,8 +17,11 @@ export type Address = {
   source: string;
 };
 
-export type PendingAddress = Address & {
-  
+export type PendingAddress = {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  source: string;
 };
 
 export type ThreadAddress = PendingAddress & {
@@ -33,6 +36,11 @@ export type AgentThreadState = {
 let agent: HttpAgent | null = null;
 const agentListeners = new Set<() => void>();
 
+function mirrorThreadAddress(state: AgentThreadState | undefined): void {
+  const address = state?.address;
+  if (!address) return;
+  markAddressConfirmedFromThread(address, address.served);
+}
 
 export function getAgent(): HttpAgent {
   if (!agent) {
@@ -40,16 +48,9 @@ export function getAgent(): HttpAgent {
       url: `${getAgentApiUrl()}/agent`,
       threadId: getThreadId(),
     });
-    agent.subscribe({
-      onStateChanged: ({ state }) => {
-        console.log("agent state changed", state);
-
-        const address = state?.address;
-        if (address){
-          markAddressConfirmedFromThread(address, address.served);
-        }
-      }
-    });
+    agent.subscribe({ onStateChanged: ({ state }) => {
+      mirrorThreadAddress(state);
+    } });
   }
   return agent;
 }

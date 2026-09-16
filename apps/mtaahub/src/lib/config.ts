@@ -1,11 +1,10 @@
 import Constants from "expo-constants";
 
 type Extra = {
-  orchestratorUrl?: string;
-  providerRegistryUrl?: string;
-  serviceCatalogUrl?: string;
+  apiUrl?: string;
   identityServerUrl?: string;
   demoData?: boolean | string;
+  eas?: { projectId?: string };
 };
 
 function extra(): Extra {
@@ -28,23 +27,39 @@ function resolve(envValue: string | undefined, configured: string | undefined, f
   return envValue || configured || fallback;
 }
 
+/** The API gateway, which fronts the four resource services (ServiceCatalog, ProviderRegistry,
+ * ServiceRequestOrchestrator, Consumers) behind one origin. IdentityServer is not behind it — see
+ * getIdentityServerUrl. */
+export function getApiUrl(): string {
+  return resolve(process.env.EXPO_PUBLIC_API_URL, extra().apiUrl, "http://localhost:5070");
+}
+
 export function getOrchestratorUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_ORCHESTRATOR_URL, extra().orchestratorUrl, "http://localhost:5063");
+  return `${getApiUrl()}/orchestrator`;
 }
 
 export function getProviderRegistryUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_PROVIDER_REGISTRY_URL, extra().providerRegistryUrl, "http://localhost:5064");
+  return `${getApiUrl()}/registry`;
 }
 
 export function getServiceCatalogUrl(): string {
-  return resolve(process.env.EXPO_PUBLIC_SERVICE_CATALOG_URL, extra().serviceCatalogUrl, "http://localhost:5062");
+  return `${getApiUrl()}/catalog`;
 }
 
+/** IdentityServer is called directly, not through the gateway: OTP request and token issuance are
+ * anonymous, and proxying Duende would mean reconfiguring its issuer/forwarded-headers or JWT
+ * validation breaks. */
 export function getIdentityServerUrl(): string {
   return resolve(process.env.EXPO_PUBLIC_IDENTITY_SERVER_URL, extra().identityServerUrl, "http://localhost:5066");
 }
 
-/** Serves the fulfillment side from in-memory fixtures instead of the network. Off unless asked for. */
+/** The Expo project `getExpoPushTokenAsync` needs. Empty until `eas init` is run for this app — push
+ * registration treats that as "not configured" and no-ops. */
+export function getEasProjectId(): string {
+  return resolve(process.env.EXPO_PUBLIC_EAS_PROJECT_ID, extra().eas?.projectId, "55ca19d3-346b-4d9d-b9af-e8c569a5a0b9");
+}
+
+/** Serves the provider-registry/catalog reads from in-memory fixtures. Off unless asked for. */
 export function isDemoEnabled(): boolean {
   const fromEnv = process.env.EXPO_PUBLIC_DEMO_DATA;
   if (fromEnv !== undefined) return fromEnv === "1" || fromEnv === "true";

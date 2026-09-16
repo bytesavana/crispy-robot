@@ -1,9 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useEffect } from "react";
 
+import { useProviderSession } from "@/lib/providerSession";
+import { registerForPushNotificationsAsync } from "@/lib/pushNotifications";
 import { colors, typography } from "@/theme";
 
 export default function AppLayout() {
+  const session = useProviderSession();
+
+  // This subtree mounts only once a session is ready, i.e. right after every sign-in — so this is the
+  // "register on login" hook. Idempotent server-side and it re-claims the token for the current
+  // provider, so running it on each provider-id change is intended.
+  useEffect(() => {
+    if (session?.providerId) registerForPushNotificationsAsync(session.providerId).catch(() => {});
+  }, [session?.providerId]);
+
   return (
     <Tabs
       screenOptions={{
